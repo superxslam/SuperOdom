@@ -173,7 +173,6 @@ parameters=[LaunchConfiguration("config_file"),
 
 Feel free to run our code on our dataset with [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). 
 
-
 ## 📫 7. Contact
 
 - [Open an Issue](https://github.com/YourUsername/SuperOdometry)

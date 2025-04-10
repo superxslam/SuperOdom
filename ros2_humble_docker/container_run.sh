@@ -19,8 +19,8 @@ fi
 # Assign the arguments to variables for clarity
 CONTAINER_NAME="$1"
 IMAGE_NAME="$2"
-PROJECT_DIR="/home/mmpug/laser_odometry/superodometry_ros2/src"
-DATASET_DIR="/home/mmpug/dataset"
+PROJECT_DIR="/path/to/your/superodom"
+DATASET_DIR="/path/to/your/dataset"
 
 # Launch the nvidia-docker container with the provided image name and tag
 docker run --privileged -it \
