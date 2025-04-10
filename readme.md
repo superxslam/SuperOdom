@@ -30,7 +30,7 @@
 - **ROS 2.0 Integration**
   - Built on ROS 2 Humble for modern robotics development
 - **Degeneracy Awareness**
-  - Robust handling of environmental degeneracy
+  - Robust detection of environmental degeneracy
 
 ## 2. System Pipeline
 
@@ -140,7 +140,21 @@ docker exec --privileged -it superodom-ros2 /bin/bash
 source /opt/ros/humble/setup.bash
 ```
 
-### Launch Super Odometry
+### Launch SuperOdometry
+
+To launch SuperOdometry, we provide three demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
+
+Run SuperOdometry using the following command: 
+
+```bash
+source install/setup.bash
+ros2 launch super_odometry livox_mid360.launch.py
+ros2 launch super_odometry os1_128.launch.py
+ros2 launch super_odometry vlp_16.launch.py
+
+```
+
+We also provide tmux script for easy launch with dataset: 
 ```bash
 cd script
 tmuxp load run.yaml
@@ -160,11 +174,18 @@ init_pitch: 0.0          # Initial pitch angle
 init_yaw: 0.0      # Initial yaw angle
 ```
 
+Add ground truth map load in launch file
+```yaml
+parameters=[LaunchConfiguration("config_file"),
+    { "calibration_file": LaunchConfiguration("calibration_file"),
+     "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
+}]
+```
+
 
 ## 📍 6. Dataset 
 
 Feel free to run our code on our dataset with [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). 
-
 
 ## 📫 7. Contact
 

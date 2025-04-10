@@ -26,7 +26,7 @@ ros2 launch super_odometry arize_slam.launch.py
 timespan x        y        z      roll     pitch     yaw
 50s 13.983960 1.305790 0.002673   0.00     0.0 -1.150664
 ```
-## Put the start_pose.txt same directory of groundtruth map (pointcloud_local.txt)
+## Put the start_pose.txt same directory of groundtruth map (pointcloud_local.pcd)
 
 ## Test Bag file
 https://drive.google.com/drive/u/0/folders/1R8Tx8nLDC184gjUaMPZjTiklIhsH7RLV
