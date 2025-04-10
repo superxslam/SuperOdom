@@ -10,11 +10,12 @@
   <img src="./doc/superodom.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
 
-> 🔥 This is a slim version of Super Odometry, containing the LiDAR Odometry component and IMU Odometry component. The LiDAR odometry only provides pose constraints to IMU odometry modules to achieve factor graph optimization. The system has been extensively tested across various platforms.
-
+> 🔥 This is a slim version of Super Odometry, containing the LiDAR Odometry component and IMU Odometry component. The LiDAR odometry only provides pose constraints to IMU odometry modules to estimate the bias of IMU. In return, IMU odometry provides pose prediction for LiDAR odometry module as initial guess for ICP optimization. 
 <p align="center">
   <img src="./doc/tested_platform.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
+
+> 🔥 The system has been widely tested on above platforms equipped with Livox, Velodyne and Ouster LiDAR. 
 
 ## 🔥 1. Key Features
 
