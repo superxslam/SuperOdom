@@ -10,7 +10,7 @@
   <img src="./doc/superodom.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
 
-> 🔥 This is a slim version of Super Odometry, containing the LiDAR Odometry component and IMU Odometry component. The LiDAR odometry only provides pose constraints to IMU odometry modules to estimate the bias of IMU. In return, IMU odometry provides pose prediction for LiDAR odometry module as initial guess for ICP optimization. 
+> 🔥 This is a slim version of Super Odometry, containing the LiDAR Odometry component and IMU Odometry component. The LiDAR odometry only provides pose constraints to IMU odometry modules to estimate the bias of IMU. In return, the IMU Odometry module offers pose predictions to the LiDAR Odometry module, serving as an initial guess for ICP optimization.
 <p align="center">
   <img src="./doc/tested_platform.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
