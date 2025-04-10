@@ -86,6 +86,6 @@ windows:
                 - cd ~/ros2_ws
                 - source install/setup.bash 
                 - source /opt/ros/humble/setup.bash
-                - cd /root/ros2_ws/src/subt_state_estimation/super_odometry
+                - cd /root/ros2_ws/src/SuperOdom/super_odometry
                 - sleep 5
                 - rviz2 -d ros2.rviz

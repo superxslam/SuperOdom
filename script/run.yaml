@@ -16,21 +16,14 @@ windows:
                 - cd ~/ros2_ws
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
-                - ros2 launch super_odometry arize_slam.launch.py 
+                - ros2 launch super_odometry livox_mid360.launch.py 
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
                 - cd ~/ros2_ws
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
-                - cd /root/data/cic_office_video
+                - cd /root/data/
                 - sleep 3
-                - ros2 bag play cic_office_video.db3 --rate 1.0
-          - shell_command:
-                - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
-                - source install/setup.bash 
-                - source /opt/ros/humble/setup.bash
-                - ros2 topic echo /imu/data
 
     - window_name: rviz
       focus: false
@@ -41,6 +34,6 @@ windows:
                 - cd ~/ros2_ws
                 - source install/setup.bash 
                 - source /opt/ros/humble/setup.bash
-                - cd /root/ros2_ws/src/subt_state_estimation/super_odometry
-                - sleep 5
+                - cd /root/ros2_ws/src/SuperOdom/super_odometry
+                - sleep 3
                 - rviz2 -d ros2.rviz
