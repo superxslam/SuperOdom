@@ -205,7 +205,7 @@ This package is released under the GPLv3 license. For commercial use, please con
 
 ## 🙏 11. Acknowledgements
 
-Special thanks to Professor Ji Zhang and Professor Michael Kaess for their valuable advice. We also acknowledge these foundational works:
+Special thanks to Professor Ji Zhang, Professor Michael Kaess, Parv Maheshwari, Yuanjun Gao, Yaoyu Hu for their valuable advice. We also acknowledge these foundational works:
 
 - LOAM: Lidar Odometry and Mapping in Real-time (RSS 2014)
 - GTSAM: Georgia Tech Smoothing and Mapping Library
