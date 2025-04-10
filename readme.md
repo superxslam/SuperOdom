@@ -1,4 +1,4 @@
-# SuperOdometry: Lightweight LiDAR Odometry and Mapping
+# SuperOdometry: Lightweight LiDAR-inertial Odometry and Mapping
 
 <div align="center">
 
@@ -17,33 +17,37 @@
   <img src="./doc/tested_platform.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
 
-## 🔥 Key Features
+## 🔥 1. Key Features
 
 - **Multi-LiDAR Support**
   - Compatible with Livox, Velodyne, and Ouster sensors
+- **LiDAR-inertial Fusion**
+  - Support LiDAR-inertial Fusion 
 - **Dual-Mode Operation**
   - Supports both localization and mapping modes
-- **Uncertainty Estimation**
+- **Alignment Risk Prediction**
   - Provides alignment risk prediction for ICP algorithms
 - **ROS 2.0 Integration**
   - Built on ROS 2 Humble for modern robotics development
 - **Degeneracy Awareness**
   - Robust handling of environmental degeneracy
 
-## System Pipeline
+## 2. System Pipeline
 
 <p align="center">
-  <a href="./doc/uncertainty_estimation.mp4">
-    <img src="./doc/superloc.png" alt="Super Odometry Pipeline" width="800"/>
-  </a>
+  <img src="./doc/superloc.png" alt="SuperLoc Pipeline" width="800"/>
+</p>
+
+<p align="center">
+  <img src="./doc/uncertainty.gif" alt="Alignment Risk Prediction" width="800"/>
 </p>
 
 
-View our demo results and evaluations at [slam mode](https://superodometry.com)) and [localizaiton mode](https://superodometry.com/superloc)
+View our demo results and evaluations at [slam mode](https://superodometry.com) and [localizaiton mode](https://superodometry.com/superloc)
 
 
-## 📦 Installation
-> Highly recommend to check our docker files to run our code
+## 📦 3. Installation
+> Highly recommend to check our docker files to run our code with step 4 and step 5. 
 ### System Requirements
 
 - ROS2 Humble
@@ -83,7 +87,7 @@ make -j6 && sudo make install
 sudo apt-get install -y libceres-dev
 ```
 
-## 🐳 Docker Setup
+## 🐳 4. Docker Setup
 
 ### Prerequisites
 - [Docker](https://www.docker.com/)
@@ -116,7 +120,7 @@ cd ~/ros_ws
 colcon build
 ```
 
-## 🚀 Quick Start
+## 🚀 5. Quick Start
 
 ### Container Setup
 ```bash
@@ -157,17 +161,17 @@ init_yaw: 0.0      # Initial yaw angle
 ```
 
 
-## 📍 Dataset 
+## 📍 6. Dataset 
 
 Feel free to run our code on our dataset with [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). 
 
 
-## 📫 Contact
+## 📫 7. Contact
 
 - [Open an Issue](https://github.com/YourUsername/SuperOdometry)
 - [Visit our Website](https://superodometry.com/contact)
 
-## 📚 Citations
+## 📚 8. Citations
 
 ```bibtex
 @inproceedings{zhao2021super,
@@ -188,18 +192,18 @@ Feel free to run our code on our dataset with [slam_mode](https://superodometry.
 }
 ```
 
-## Next Plan
+## 9. Next Plan
 🔵 Colorized Point Cloud Visualization — [Video Demo](https://www.youtube.com/watch?v=r7nLDGrz4gE)
 
 🟢 Visual Odometry Module — Initial Release
 Lightweight and robust visual odometry module integrated into SuperOdometry.
 
 
-## 📝 License
+## 📝 10. License
 
 This package is released under the GPLv3 license. For commercial use, please contact shiboz@andrew.cmu.edu and Prof. Sebastian Scherer.
 
-## 🙏 Acknowledgements
+## 🙏 11. Acknowledgements
 
 Special thanks to Professor Ji Zhang and Professor Michael Kaess for their valuable advice. We also acknowledge these foundational works:
 
