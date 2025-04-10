@@ -71,7 +71,7 @@ def generate_launch_description():
         },
         parameters=[LaunchConfiguration("config_file"),
             { "calibration_file": LaunchConfiguration("calibration_file"),
-             "map_dir": os.path.join(home_directory, "/root/data/cic_office_video/cic_office_video_ds.pcd"),
+             "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
         }],
         remappings=[
             ("laser_odom_to_init", LaunchConfiguration("odom_topic")),

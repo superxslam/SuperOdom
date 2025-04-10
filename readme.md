@@ -160,6 +160,14 @@ init_pitch: 0.0          # Initial pitch angle
 init_yaw: 0.0      # Initial yaw angle
 ```
 
+Add ground truth map load in launch file
+```yaml
+parameters=[LaunchConfiguration("config_file"),
+    { "calibration_file": LaunchConfiguration("calibration_file"),
+     "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
+}]
+```
+
 
 ## 📍 6. Dataset 
 
