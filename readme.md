@@ -142,7 +142,7 @@ source /opt/ros/humble/setup.bash
 
 ### Launch SuperOdometry
 
-To launch SuperOdometry, we provide three demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
+To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
 
 Run SuperOdometry using the following command: 
 
@@ -151,7 +151,12 @@ source install/setup.bash
 ros2 launch super_odometry livox_mid360.launch.py
 ros2 launch super_odometry os1_128.launch.py
 ros2 launch super_odometry vlp_16.launch.py
-
+```
+Visualize in RVIZ2: 
+```bash
+source install/setup.bash
+cd ~/ros_ws/src/SuperOdom/super_odometry
+rviz2 -d ros2.rviz
 ```
 
 We also provide tmux script for easy launch with dataset: 
@@ -174,7 +179,7 @@ init_pitch: 0.0          # Initial pitch angle
 init_yaw: 0.0      # Initial yaw angle
 ```
 
-Add ground truth map load in launch file
+Add ground truth map map in launch file
 ```yaml
 parameters=[LaunchConfiguration("config_file"),
     { "calibration_file": LaunchConfiguration("calibration_file"),
