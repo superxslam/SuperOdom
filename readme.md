@@ -30,7 +30,7 @@
 - **ROS 2.0 Integration**
   - Built on ROS 2 Humble for modern robotics development
 - **Degeneracy Awareness**
-  - Robust handling of environmental degeneracy
+  - Robust detection of environmental degeneracy
 
 ## 2. System Pipeline
 
