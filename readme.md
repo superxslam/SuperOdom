@@ -148,10 +148,13 @@ Run SuperOdometry using the following command:
 
 ```bash
 source install/setup.bash
-ros2 launch super_odometry $(SENSOR).launch.py
+ros2 launch super_odometry livox_mid360.launch.py
+ros2 launch super_odometry os1_128.launch.py
+ros2 launch super_odometry vlp_16.launch.py
+
 ```
 
-We also provide tmux script to easy launch
+We also provide tmux script for easy launch: 
 ```bash
 cd script
 tmuxp load run.yaml
