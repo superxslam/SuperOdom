@@ -10,7 +10,7 @@
   <img src="./doc/superodom.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
 
-> 🔥 This is a slim version of Super Odometry, containing the LiDAR-inertial Odometry component and IMU Odometry component. The LiDAR odometry only provides pose constraints to IMU odometry modules to achieve factor graph optimization. The system has been extensively tested across various platforms.
+> 🔥 This is a slim version of Super Odometry, containing the LiDAR Odometry component and IMU Odometry component. The LiDAR odometry only provides pose constraints to IMU odometry modules to achieve factor graph optimization. The system has been extensively tested across various platforms.
 
 <p align="center">
   <img src="./doc/tested_platform.png" alt="Super Odometry Pipeline" width="800"/>
