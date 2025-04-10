@@ -140,7 +140,18 @@ docker exec --privileged -it superodom-ros2 /bin/bash
 source /opt/ros/humble/setup.bash
 ```
 
-### Launch Super Odometry
+### Launch SuperOdometry
+
+To launch SuperOdometry, we provide three demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
+
+Run SuperOdometry using the following command: 
+
+```bash
+source install/setup.bash
+ros2 launch super_odometry $(SENSOR).launch.py
+```
+
+We also provide tmux script to easy launch
 ```bash
 cd script
 tmuxp load run.yaml
