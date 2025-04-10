@@ -1,0 +1,40 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>super_odometry</name>
+  <version>0.0.0</version>
+
+  <description>
+    This is an implementation of super_odometry, which is based on LOAM algorithm.
+    LOAM is described in the following paper:
+    J. Zhang and S. Singh. LOAM: Lidar Odometry and Mapping in Real-time.
+      Robotics: Science and Systems Conference (RSS). Berkeley, CA, July 2014.
+  </description>
+
+  <maintainer email="shibowing@gmail.com">Shibo Zhao</maintainer>
+
+  <license>BSD</license>
+ 
+  <buildtool_depend>amend_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclpy</depend>
+  <depend>tf2</depend>
+  <depend>std_msgs</depend>
+  <depend>nav_msgs</depend>
+  <depend>geometry_msgs</depend>
+  <depend>sensor_msgs</depend>
+  <depend>super_odometry_msgs</depend>
+  <depend>image_transport</depend>
+  <!-- <depend>tf_conversions</depend> -->
+  <depend>pcl_conversion</depend>
+  <depend>sophus</depend>
+  <depend>livox_ros_driver2</depend>
+  
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_lint_common</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+  </export>
+</package>

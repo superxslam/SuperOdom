@@ -1,0 +1,11 @@
+./velodyne_driver_16_32
+./cmake-build-debug/cmake-build-debug
+./vins_estimator/camke-build-debug
+./vins_estimator/camke-build-release
+./super_odometry/camke-build-debug
+*.idea
+*.vscode
+./build
+./install
+./log
+

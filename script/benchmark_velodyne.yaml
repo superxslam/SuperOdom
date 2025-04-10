@@ -1,0 +1,82 @@
+%YAML 1.2
+---
+session_name: SuperOdom_ROS2
+suppress_history: false
+before_script: docker start superodom-ros2
+windows:
+    - window_name: superodom_ros2
+      focus: false
+      layout: main-vertical
+      panes:
+          - shell_command:
+                - docker exec --privileged -it superodom-ros2 /bin/bash
+            #     - DATASET_DIR=/root/data/cic_office_video ## hange to your dataset directory here
+                - DATASET_DIR=/root/data/cave/big_loop/big_loop ## hange to your dataset directory here
+                - mkdir -p $DATASET_DIR/benchmark
+                - echo $DATASET_DIR > /tmp/current_dataset_dir
+                - cd ~/ros2_ws
+                - source /opt/ros/humble/setup.bash
+                - source install/setup.bash 
+
+                - ros2 launch super_odometry vlp_16.launch.py
+          - shell_command:
+                - docker exec --privileged -it superodom-ros2 /bin/bash
+                - cd ~/ros2_ws
+                - sleep 3
+                - source /opt/ros/humble/setup.bash
+                - source install/setup.bash 
+                - DATASET_DIR=$(cat /tmp/current_dataset_dir)
+                - cd $DATASET_DIR
+                # - ros2 bag play *.db3 --topics /velodyne_points --rate 3.0 && echo "PLAYBACK_COMPLETE" > /tmp/bag_complete 
+                - ros2 bag play *.db3 --rate 2.0 && echo "PLAYBACK_COMPLETE" > /tmp/bag_complete 
+
+          - shell_command:
+                - docker exec --privileged -it superodom-ros2 /bin/bash
+                - cd ~/ros2_ws
+                - sleep 2
+                - source /opt/ros/humble/setup.bash
+                - source install/setup.bash 
+                - DATASET_DIR=$(cat /tmp/current_dataset_dir)
+                - cd $DATASET_DIR/benchmark
+                # Create benchmark directory and export the name as a file so other panes can read it
+                - BENCHMARK_DIR=benchmark_velodyne_$(date '+%Y-%m-%d_%H-%M-%S')
+                - mkdir -p $BENCHMARK_DIR && cd $BENCHMARK_DIR
+                - echo $BENCHMARK_DIR > /tmp/current_benchmark_dir
+                - cp ~/ros2_ws/src/subt_state_estimation/super_odometry/config/vlp_16.yaml .
+                - cp ~/ros2_ws/src/subt_state_estimation/script/save_benchmark_result.py .
+                - cp ~/ros2_ws/src/subt_state_estimation/script/save_superodom_stats_matplotlib.py .
+                - bash -c "ros2 bag record /super_odometry_stats & RECORD_PID=$!; while [ ! -f /tmp/bag_complete ]; do sleep 1; done; kill $RECORD_PID; rm /tmp/bag_complete; echo 'Recording stopped';"
+          - shell_command:
+                - docker exec --privileged -it superodom-ros2 /bin/bash
+                - cd ~/ros2_ws
+                - sleep 2
+                - source /opt/ros/humble/setup.bash
+                - source install/setup.bash 
+                - DATASET_DIR=$(cat /tmp/current_dataset_dir)
+                - cd $DATASET_DIR/benchmark
+                - BENCHMARK_DIR=$(cat /tmp/current_benchmark_dir)
+                - cd $BENCHMARK_DIR
+                - python3 save_benchmark_result.py
+          - shell_command:
+                - docker exec --privileged -it superodom-ros2 /bin/bash
+                - cd ~/ros2_ws
+                - sleep 2
+                - source /opt/ros/humble/setup.bash
+                - source install/setup.bash 
+                - DATASET_DIR=$(cat /tmp/current_dataset_dir)
+                - cd $DATASET_DIR/benchmark
+                - BENCHMARK_DIR=$(cat /tmp/current_benchmark_dir)
+                - cd $BENCHMARK_DIR
+                - python3 save_superodom_stats_matplotlib.py
+    - window_name: rviz
+      focus: false
+      layout: main-horizontal
+      panes:
+          - shell_command:
+                - docker exec --privileged -it superodom-ros2 /bin/bash
+                - cd ~/ros2_ws
+                - source install/setup.bash 
+                - source /opt/ros/humble/setup.bash
+                - cd /root/ros2_ws/src/subt_state_estimation/super_odometry
+                - sleep 5
+                - rviz2 -d ros2.rviz
