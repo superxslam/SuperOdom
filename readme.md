@@ -154,7 +154,7 @@ ros2 launch super_odometry vlp_16.launch.py
 
 ```
 
-We also provide tmux script for easy launch: 
+We also provide tmux script for easy launch with dataset: 
 ```bash
 cd script
 tmuxp load run.yaml
