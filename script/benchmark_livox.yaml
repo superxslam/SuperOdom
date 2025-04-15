@@ -40,9 +40,9 @@ windows:
                 - BENCHMARK_DIR=benchmark_livox_$(date '+%Y-%m-%d_%H-%M-%S')
                 - mkdir -p $BENCHMARK_DIR && cd $BENCHMARK_DIR
                 - echo $BENCHMARK_DIR > /tmp/current_benchmark_dir
-                - cp ~/ros2_ws/src/subt_state_estimation/super_odometry/config/livox_mid360.yaml .
-                - cp ~/ros2_ws/src/subt_state_estimation/script/save_benchmark_result.py .
-                - cp ~/ros2_ws/src/subt_state_estimation/script/save_superodom_stats_matplotlib.py .
+                - cp ~/ros2_ws/src/SuperOdom/super_odometry/config/livox_mid360.yaml .
+                - cp ~/ros2_ws/src/SuperOdom/script/save_benchmark_result.py .
+                - cp ~/ros2_ws/src/SuperOdom/script/save_superodom_stats_matplotlib.py .
                 - bash -c "ros2 bag record /super_odometry_stats & RECORD_PID=$!; while [ ! -f /tmp/bag_complete ]; do sleep 1; done; kill $RECORD_PID; rm /tmp/bag_complete; echo 'Recording stopped';"
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash

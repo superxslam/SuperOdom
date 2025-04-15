@@ -88,7 +88,6 @@ RUN /bin/bash -c '. /opt/ros/humble/setup.bash;'
 RUN pip install rerun-sdk
 RUN pip install numpy==1.24.3 matplotlib==3.7.1
 RUN pip install --upgrade packaging
-RUN sudo apt install -y ros-noetic-velodyne-pointcloud
 
 
 WORKDIR /root/ros2_ws
