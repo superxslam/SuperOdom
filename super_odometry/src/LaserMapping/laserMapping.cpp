@@ -188,7 +188,6 @@ namespace super_odometry {
         this->declare_parameter("laser_mapping_node.auto_voxel_size", true);
         this->declare_parameter("laser_mapping_node.forget_far_chunks", false);
         this->declare_parameter("laser_mapping_node.visual_confidence_factor", 1.0);
-        this->declare_parameter("laser_mapping_node.map_dir", "pointcloud_local.txt");
         this->declare_parameter("laser_mapping_node.localization_mode", false); // Add default value!
         this->declare_parameter("laser_mapping_node.read_pose_file", false);
         this->declare_parameter("laser_mapping_node.init_x", 0.0);
@@ -197,6 +196,8 @@ namespace super_odometry {
         this->declare_parameter("laser_mapping_node.init_roll", 0.0);
         this->declare_parameter("laser_mapping_node.init_pitch", 0.0);
         this->declare_parameter("laser_mapping_node.init_yaw", 0.0);
+        this->declare_parameter("map_dir", "pointcloud_local.pcd");
+
 
         // Get parameters
         config_.lineRes = this->get_parameter("laser_mapping_node.mapping_line_resolution").as_double();
@@ -211,7 +212,7 @@ namespace super_odometry {
         config_.auto_voxel_size = this->get_parameter("laser_mapping_node.auto_voxel_size").as_bool();
         config_.forget_far_chunks = this->get_parameter("laser_mapping_node.forget_far_chunks").as_bool();
         config_.visual_confidence_factor = this->get_parameter("laser_mapping_node.visual_confidence_factor").as_double();
-        config_.map_dir = this->get_parameter("laser_mapping_node.map_dir").as_string(); 
+        config_.map_dir = this->get_parameter("map_dir").as_string(); 
         config_.localization_mode = this->get_parameter("laser_mapping_node.localization_mode").as_bool();
         config_.read_pose_file = this->get_parameter("laser_mapping_node.read_pose_file").as_bool();
         config_.use_imu_roll_pitch = USE_IMU_ROLL_PITCH;
