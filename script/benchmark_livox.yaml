@@ -77,4 +77,4 @@ windows:
                 - source /opt/ros/humble/setup.bash
                 - cd /root/ros2_ws/src/SuperOdom/super_odometry
                 - sleep 5
-                - rviz2 -d ros2_confidence.rviz
+                - rviz2 -d ros2.rviz
