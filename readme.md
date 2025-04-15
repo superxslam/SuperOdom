@@ -42,9 +42,7 @@
   <img src="./doc/uncertainty.gif" alt="Alignment Risk Prediction" width="800"/>
 </p>
 
-
-View our demo results and evaluations at [slam mode](https://superodometry.com) and [localizaiton mode](https://superodometry.com/superloc)
-
+> 🔥 6 DOF degeneracy uncertainty detection. 
 
 ## 📦 3. Installation
 > Highly recommend to check our docker files to run our code with step 4 and step 5. 
@@ -53,11 +51,9 @@ View our demo results and evaluations at [slam mode](https://superodometry.com) 
 - ROS2 Humble
 - PCL
 - Eigen
-- [Livox-SDK2](https://github.com/Livox-SDK/livox_ros_driver2)
 - [Sophus](https://github.com/strasdat/Sophus)
 - [GTSAM (4.0.2 or 4.1)](https://github.com/borglab/gtsam)
 - [Ceres Solver](http://ceres-solver.org/)
-- [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
 
 ### Dependencies Installation
 
@@ -109,6 +105,10 @@ ros_ws/src
 ├── livox_ros_driver2
 └── rviz_2d_overlay_plugins
 ```
+You can download livox_ros_driver2 and rviz_2d_overlay_plugins using the following link:
+
+- [Livox-SDK2](https://github.com/Livox-SDK/livox_ros_driver2)
+- [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
 
 > **Important**: Maintain this exact structure within `ros_ws/src`
 
