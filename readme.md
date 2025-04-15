@@ -105,9 +105,9 @@ ros_ws/src
 ├── livox_ros_driver2
 └── rviz_2d_overlay_plugins
 ```
-You can download livox_ros_driver2 and rviz_2d_overlay_plugins using the following link:
+You can download `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the following link:
 
-- [Livox-SDK2](https://github.com/Livox-SDK/livox_ros_driver2)
+- [Livox-ROS-driver2](https://github.com/Livox-SDK/livox_ros_driver2)
 - [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
 
 > **Important**: Maintain this exact structure within `ros_ws/src`
