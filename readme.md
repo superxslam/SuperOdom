@@ -144,6 +144,8 @@ source /opt/ros/humble/setup.bash
 
 To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
 
+For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
+
 Run SuperOdometry using the following command: 
 
 ```bash
@@ -167,6 +169,8 @@ tmuxp load run.yaml
 
 ## 📍 Localization Mode Configuration
 
+The localization mode allows you to localize your robot by providing an initial pose and ground truth map. 
+
 Update your `.yaml` configuration file with:
 ```yaml
 localization_mode: true         # If true, localization mode is enabled; otherwise, SLAM mode is used
@@ -186,11 +190,6 @@ parameters=[LaunchConfiguration("config_file"),
      "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
 }]
 ```
-
-
-## 📍 6. Dataset 
-
-Feel free to run our code on our dataset with [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). 
 
 <!-- ## 📫 7. Contact
 

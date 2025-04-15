@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
-    imu_topic: "/lester/sensors/ouster/imu"
-    laser_topic: "/lester/sensors/ouster/points"
+    imu_topic: "/ouster/imu"
+    laser_topic: "/ouster/points"
     sensor: "ouster"
     use_imu_roll_pitch: false
     
