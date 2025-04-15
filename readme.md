@@ -169,7 +169,9 @@ tmuxp load run.yaml
 
 ## 📍 Localization Mode Configuration
 
-The localization mode allows you to localize your robot by providing an initial pose and ground truth map. 
+https://github.com/user-attachments/assets/42cb5480-c283-4608-84be-ff12a05d09e0
+
+> 🔥 The localization mode allows you to localize your robot by providing an initial pose and ground truth map. 
 
 Update your `.yaml` configuration file with:
 ```yaml
