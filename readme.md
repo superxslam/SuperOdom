@@ -190,6 +190,7 @@ parameters=[LaunchConfiguration("config_file"),
      "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
 }]
 ```
+To quickly launch our localization module, feel free to try out this demo [dataset](https://drive.google.com/drive/folders/1WOTj4j9t5LkKkdajFlj6bZcdmPcsJipz?usp=sharing) using default initial pose configuration. 
 
 <!-- ## 📫 7. Contact
 

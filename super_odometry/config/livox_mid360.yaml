@@ -27,7 +27,8 @@
         max_iterations: 5
         max_surface_features: 4000
 
-        local_mode: false
+        # For localization mode
+        localization_mode: true
         read_pose_file: false
         init_x: 0.0
         init_y: 0.0
