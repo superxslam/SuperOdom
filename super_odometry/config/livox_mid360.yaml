@@ -28,7 +28,7 @@
         max_surface_features: 4000
 
         # For localization mode
-        localization_mode: true
+        localization_mode: false
         read_pose_file: false
         init_x: 0.0
         init_y: 0.0
