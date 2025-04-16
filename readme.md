@@ -196,7 +196,7 @@ Play your ROS2 dataset:
 # launch this in a new bash window
 docker exec --privileged -it superodom-ros2 /bin/bash
 source install/setup.bash
-cd ~/ros2_ws/data
+cd ~/data
 ros2 play $(YOUR_ROS2_DATASET)
 ```
 
