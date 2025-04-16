@@ -221,16 +221,16 @@ https://github.com/user-attachments/assets/42cb5480-c283-4608-84be-ff12a05d09e0
 
 > 🔥 The localization mode allows you to localize your robot by providing an initial pose and ground truth map. 
 
-Update your `.yaml` configuration file with:
+Update your `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml` configuration file with:
 ```yaml
 localization_mode: true         # If true, localization mode is enabled; otherwise, SLAM mode is used
-read_pose_file: false    # Set to true to read initial pose from a txt file
-init_x: 0.0        # Initial X position for localization
-init_y: 0.0         # Initial Y position for localization
-init_z: 0.0         # Initial Z position for localization
-init_roll: 0.0           # Initial roll angle
-init_pitch: 0.0          # Initial pitch angle
-init_yaw: 0.0      # Initial yaw angle
+read_pose_file: false           # Set to true to read initial pose from a txt file
+init_x: 0.0                     # Initial X position for localization
+init_y: 0.0                     # Initial Y position for localization
+init_z: 0.0                     # Initial Z position for localization
+init_roll: 0.0                  # Initial roll angle
+init_pitch: 0.0                 # Initial pitch angle
+init_yaw: 0.0                   # Initial yaw angle
 ```
 
 Add ground truth map map in launch file
