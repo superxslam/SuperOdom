@@ -16,6 +16,10 @@ namespace super_odometry {
         rclcpp::SubscriptionOptions sub_options;
         sub_options.callback_group = cb_group_;
 
+        rclcpp::QoS imu_qos(10);
+        imu_qos.best_effort();  // Use BEST_EFFORT reliability
+        imu_qos.keep_last(10);  // Keep last 10 messages
+
         if (!readGlobalparam(shared_from_this())) {
             RCLCPP_ERROR(this->get_logger(), "[SuperOdometry::imuPreintegration] Could not read global parameters. Exiting...");
             rclcpp::shutdown();
@@ -32,12 +36,11 @@ namespace super_odometry {
             rclcpp::shutdown();
         }
 
-
         RCLCPP_INFO(this->get_logger(), "[SuperOdometry::imuPreintegration] use_imu_rol_pitch:  %d", config_.use_imu_roll_pitch);
 
         //subscribe and publish relevant topics
         subImu = this->create_subscription<sensor_msgs::msg::Imu>(
-            IMU_TOPIC, 10,
+            IMU_TOPIC, imu_qos,
             std::bind(&imuPreintegration::imuHandler, this,
                         std::placeholders::_1), sub_options);
         subLaserOdometry = this->create_subscription<nav_msgs::msg::Odometry>(

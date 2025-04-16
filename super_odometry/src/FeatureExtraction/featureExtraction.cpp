@@ -18,7 +18,6 @@
 #define ITALIC "\033[3m"
 
 
-
 namespace super_odometry {
     
     featureExtraction::featureExtraction(const rclcpp::NodeOptions & options)
@@ -30,6 +29,14 @@ namespace super_odometry {
         cb_group_ = create_callback_group(rclcpp::CallbackGroupType::Reentrant);
         rclcpp::SubscriptionOptions sub_options;
         sub_options.callback_group = cb_group_;
+
+        rclcpp::QoS imu_qos(10);
+        imu_qos.best_effort();  // Use BEST_EFFORT reliability
+        imu_qos.keep_last(10);  // Keep last 10 messages
+
+        rclcpp::QoS laser_qos(10);
+        laser_qos.best_effort();  // Use BEST_EFFORT reliability
+        laser_qos.keep_last(2);  // Keep last 10 messages
 
         if(!readGlobalparam(shared_from_this()))
         {
@@ -59,7 +66,7 @@ namespace super_odometry {
         }
 
         if (config_.sensor == SensorType::VELODYNE || config_.sensor == SensorType::OUSTER) {
-            subLaserCloud = this->create_subscription<sensor_msgs::msg::PointCloud2>(LASER_TOPIC, 2, 
+            subLaserCloud = this->create_subscription<sensor_msgs::msg::PointCloud2>(LASER_TOPIC, laser_qos, 
                     std::bind(&featureExtraction::laserCloudHandler, this,
                     std::placeholders::_1), sub_options);
         } else if (config_.sensor == SensorType::LIVOX) {
@@ -69,7 +76,7 @@ namespace super_odometry {
         } //TODO: add this to config
 
         subImu = this->create_subscription<sensor_msgs::msg::Imu>(
-            IMU_TOPIC, 10, 
+            IMU_TOPIC, imu_qos, 
             std::bind(&featureExtraction::imu_Handler, this,
                         std::placeholders::_1), sub_options);
 
@@ -158,34 +165,6 @@ namespace super_odometry {
             config_.sensor = SensorType::OUSTER;
         } 
         return true;
-    }
-
-    bool featureExtraction::parseSensorType() {
-        std::string sensorType;
-        if (!this->get_parameter("sensor", sensorType)) {
-            RCLCPP_ERROR(this->get_logger(), "No sensor parameter specified");
-            return false;
-        }
-
-        // Map string to sensor type enum
-        const std::unordered_map<std::string, SensorType> sensorTypeMap = {
-            {"velodyne", SensorType::VELODYNE},
-            {"ouster", SensorType::OUSTER},
-            {"livox", SensorType::LIVOX}
-        };
-
-        auto it = sensorTypeMap.find(sensorType);
-        if (it != sensorTypeMap.end()) {
-            config_.sensor = it->second;
-            RCLCPP_INFO(this->get_logger(), "Sensor type: %s", sensorType.c_str());
-            return true;
-        } else {
-            RCLCPP_ERROR(this->get_logger(),
-                RED "Invalid sensor type: %s (must be 'velodyne', 'ouster', or 'livox')" RESET, 
-                sensorType.c_str());
-            rclcpp::shutdown();
-            return false;
-        }
     }
 
 
