@@ -132,12 +132,10 @@ sudo chmod -R 777 container_run.sh
 # Start container
 ./container_run.sh superodom-ros2 superodom-ros2:latest
 
-# Access container
-docker exec --privileged -it superodom-ros2 /bin/bash
-
 # Source ROS2
 source /opt/ros/humble/setup.bash
 ```
+> **Important**: To access container, you can open a new bash window and run `docker exec --privileged -it superodom-ros2 /bin/bash` 
 
 Build the workspace within container
 ```bash
@@ -154,12 +152,12 @@ To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and O
 
 For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
 
-For user defined topic name, go to `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`, and modify the following: 
+For user-defined topic name, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
 ```bash
 imu_topic: "/imu/data"
 laser_topic: "/lidar/scan"
 ```
-For user defined laser-imu extrinsics, go to `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`, and modify the following: 
+For user-defined laser-imu extrinsics, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`: 
 ```bash
 #Rotation from laser frame to imu frame, imu^R_laser
 extrinsicRotation_imu_laser: !!opencv-matrix
@@ -186,14 +184,24 @@ ros2 launch super_odometry livox_mid360.launch.py
 ros2 launch super_odometry os1_128.launch.py
 ros2 launch super_odometry vlp_16.launch.py
 ```
+Play your ros2 dataset:
+```bash
+# launch this in a new bash window
+source install/setup.bash
+cd ~/ros2_ws/data
+ros2 play $(YOUR_ROS2_DATASET)
+```
+
 Visualize in RVIZ2: 
 ```bash
+# launch this in a new bash window
+docker exec --privileged -it superodom-ros2 /bin/bash
 source install/setup.bash
 cd ~/ros_ws/src/SuperOdom/super_odometry
 rviz2 -d ros2.rviz
 ```
 
-We also provide tmux script for easy launch with dataset: 
+We also provide tmux script for easy launch with dataset (this script only works after you build the workspace in docker): 
 ```bash
 cd script
 tmuxp load run.yaml
