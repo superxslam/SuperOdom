@@ -101,7 +101,7 @@ Ensure the following structure within `ros2_ws/src`:
 
 ```
 ros2_ws/src
-├── super_odometry
+├── SuperOdom
 ├── livox_ros_driver2
 └── rviz_2d_overlay_plugins
 ```
@@ -152,7 +152,7 @@ To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and O
 
 For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
 
-For user-defined topic name, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
+For user-defined topic names, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
 ```bash
 imu_topic: "/imu/data"
 laser_topic: "/lidar/scan"
@@ -184,9 +184,10 @@ ros2 launch super_odometry livox_mid360.launch.py
 ros2 launch super_odometry os1_128.launch.py
 ros2 launch super_odometry vlp_16.launch.py
 ```
-Play your ros2 dataset:
+Play your ROS2 dataset:
 ```bash
 # launch this in a new bash window
+docker exec --privileged -it superodom-ros2 /bin/bash
 source install/setup.bash
 cd ~/ros2_ws/data
 ros2 play $(YOUR_ROS2_DATASET)
