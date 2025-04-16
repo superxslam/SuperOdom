@@ -137,8 +137,6 @@ namespace super_odometry {
 
         void manageLidarBuffer(pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr pointCloud, double timestamp);
 
-        bool parseSensorType();
-
         ImuMeasurement parseImuMessage(const sensor_msgs::msg::Imu::SharedPtr& msg);
 
         double calculateDeltaTime(double current_timestamp);
