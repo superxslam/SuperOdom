@@ -97,54 +97,91 @@ docker build -t superodom-ros2:latest .
 
 ### Workspace Structure
 
-Ensure the following structure within `ros_ws/src`:
-
+First create your own local ROS2 workspace and clone `SuperOdom`: 
+```bash
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/superxslam/SuperOdom
 ```
-ros_ws/src
-├── super_odometry
+Clone respective repos and ensure they follow this exact structure under `ros2_ws/src`:
+```
+ros2_ws/src
+├── SuperOdom
 ├── livox_ros_driver2
 └── rviz_2d_overlay_plugins
 ```
-You can download `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the following link:
+You can clone `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the following link:
 
 - [Livox-ROS-driver2](https://github.com/Livox-SDK/livox_ros_driver2)
 - [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
 
 > **Important**: Maintain this exact structure within `ros_ws/src`
 
-### Building the Workspace
-```bash
-cd livox_ros_driver2
-./build.sh humble 
-cd ~/ros_ws
-colcon build
-```
-
-## 🚀 5. Quick Start
-
-### Container Setup
+### Docker Container Setup
 ```bash
 # Allow Docker GUI access
 xhost +local:docker
+```
 
-# Make container script executable
+Go to `ros2_humble_docker/container_run.sh` and make sure you change exact directory path for `PROJECT_DIR` and `DATASET_DIR`
+```bash
+PROJECT_DIR="/path/to/your/superodom"
+DATASET_DIR="/path/to/your/dataset"
+```
+> **Important**: `PROJECT_DIR` should be the exact directory to `ros2_ws/src`
+
+Then launch docker container using the following:
+```bash
+# Grant access
+cd ros2_humble_docker
 sudo chmod -R 777 container_run.sh
 
 # Start container
 ./container_run.sh superodom-ros2 superodom-ros2:latest
 
-# Access container
-docker exec --privileged -it superodom-ros2 /bin/bash
-
 # Source ROS2
 source /opt/ros/humble/setup.bash
 ```
+> **Important**: To access container, you can open a new bash window and run `docker exec --privileged -it superodom-ros2 /bin/bash` 
 
-### Launch SuperOdometry
+Build the workspace within container
+```bash
+cd ~/ros2_ws/src/livox_ros_driver2
+./build.sh humble 
+cd ~/ros2_ws
+colcon build
+```
+> **Important**: make sure you first build `livox_ros_driver2` 
+
+## 🚀 5. Launch SuperOdometry
 
 To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
 
 For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
+
+For user-defined topic names, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
+```bash
+imu_topic: "/your/imu/topic"
+laser_topic: "/your/laser/topic"
+```
+For user-defined laser-imu extrinsics, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`: 
+```bash
+#Rotation from laser frame to imu frame, imu^R_laser
+extrinsicRotation_imu_laser: !!opencv-matrix
+  rows: 3
+  cols: 3
+  dt: d  
+  data: [1., 0., 0.,
+        0., 1., 0.,
+        0., 0., 1.]
+
+#Translation from laser frame to imu frame, imu^T_laser
+extrinsicTranslation_imu_laser: !!opencv-matrix
+  rows: 3
+  cols: 1
+  dt: d
+  data: [-0.011, -0.02329, 0.04412]
+```
 
 Run SuperOdometry using the following command: 
 
@@ -154,14 +191,25 @@ ros2 launch super_odometry livox_mid360.launch.py
 ros2 launch super_odometry os1_128.launch.py
 ros2 launch super_odometry vlp_16.launch.py
 ```
+Play your ROS2 dataset:
+```bash
+# launch this in a new bash window
+docker exec --privileged -it superodom-ros2 /bin/bash
+source install/setup.bash
+cd ~/data
+ros2 play $(YOUR_ROS2_DATASET)
+```
+
 Visualize in RVIZ2: 
 ```bash
+# launch this in a new bash window
+docker exec --privileged -it superodom-ros2 /bin/bash
 source install/setup.bash
 cd ~/ros_ws/src/SuperOdom/super_odometry
 rviz2 -d ros2.rviz
 ```
 
-We also provide tmux script for easy launch with dataset: 
+We also provide tmux script for easy launch with dataset (this script only works after you build the workspace in docker): 
 ```bash
 cd script
 tmuxp load run.yaml
@@ -173,16 +221,16 @@ https://github.com/user-attachments/assets/42cb5480-c283-4608-84be-ff12a05d09e0
 
 > 🔥 The localization mode allows you to localize your robot by providing an initial pose and ground truth map. 
 
-Update your `.yaml` configuration file with:
+Update your `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml` configuration file with:
 ```yaml
 localization_mode: true         # If true, localization mode is enabled; otherwise, SLAM mode is used
-read_pose_file: false    # Set to true to read initial pose from a txt file
-init_x: 0.0        # Initial X position for localization
-init_y: 0.0         # Initial Y position for localization
-init_z: 0.0         # Initial Z position for localization
-init_roll: 0.0           # Initial roll angle
-init_pitch: 0.0          # Initial pitch angle
-init_yaw: 0.0      # Initial yaw angle
+read_pose_file: false           # Set to true to read initial pose from a txt file
+init_x: 0.0                     # Initial X position for localization
+init_y: 0.0                     # Initial Y position for localization
+init_z: 0.0                     # Initial Z position for localization
+init_roll: 0.0                  # Initial roll angle
+init_pitch: 0.0                 # Initial pitch angle
+init_yaw: 0.0                   # Initial yaw angle
 ```
 
 Add ground truth map map in launch file
