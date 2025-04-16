@@ -161,8 +161,8 @@ For more challange dataset, feel free to download from our website [slam_mode](h
 
 For user-defined topic names, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
 ```bash
-imu_topic: "/imu/data"
-laser_topic: "/lidar/scan"
+imu_topic: "/your/imu/topic"
+laser_topic: "/your/laser/topic"
 ```
 For user-defined laser-imu extrinsics, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`: 
 ```bash
