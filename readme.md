@@ -128,7 +128,7 @@ Go to `ros2_humble_docker/container_run.sh` and make sure you change exact direc
 PROJECT_DIR="/path/to/your/superodom"
 DATASET_DIR="/path/to/your/dataset"
 ```
-> **Important**: Maintain the same folder structure under `ros2_ws/src` for `PROJECT_DIR`
+> **Important**: `PROJECT_DIR` should be the exact directory to `ros2_ws/src`
 
 Then launch docker container using the following:
 ```bash
