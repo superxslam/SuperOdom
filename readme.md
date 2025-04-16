@@ -97,15 +97,20 @@ docker build -t superodom-ros2:latest .
 
 ### Workspace Structure
 
-Ensure the following structure within `ros2_ws/src`:
-
+First create your own local ROS2 workspace and clone `SuperOdom`: 
+```bash
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/superxslam/SuperOdom
+```
+Clone respective repos and ensure they follow this exact structure under `ros2_ws/src`:
 ```
 ros2_ws/src
 ├── SuperOdom
 ├── livox_ros_driver2
 └── rviz_2d_overlay_plugins
 ```
-You can download `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the following link:
+You can clone `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the following link:
 
 - [Livox-ROS-driver2](https://github.com/Livox-SDK/livox_ros_driver2)
 - [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
