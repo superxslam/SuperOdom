@@ -112,7 +112,7 @@ You can download `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the fol
 
 > **Important**: Maintain this exact structure within `ros_ws/src`
 
-### Container Setup
+### Docker Container Setup
 ```bash
 # Allow Docker GUI access
 xhost +local:docker
@@ -153,6 +153,30 @@ colcon build
 To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
 
 For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
+
+For user defined topic name, go to `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`, and modify the following: 
+```bash
+imu_topic: "/imu/data"
+laser_topic: "/lidar/scan"
+```
+For user defined laser-imu extrinsics, go to `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`, and modify the following: 
+```bash
+#Rotation from laser frame to imu frame, imu^R_laser
+extrinsicRotation_imu_laser: !!opencv-matrix
+  rows: 3
+  cols: 3
+  dt: d  
+  data: [1., 0., 0.,
+        0., 1., 0.,
+        0., 0., 1.]
+
+#Translation from laser frame to imu frame, imu^T_laser
+extrinsicTranslation_imu_laser: !!opencv-matrix
+  rows: 3
+  cols: 1
+  dt: d
+  data: [-0.011, -0.02329, 0.04412]
+```
 
 Run SuperOdometry using the following command: 
 
