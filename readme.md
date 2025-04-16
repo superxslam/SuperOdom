@@ -127,6 +127,8 @@ DATASET_DIR="/path/to/your/dataset"
 
 Then launch docker container using the following:
 ```bash
+# Grant access
+cd ros2_humble_docker
 sudo chmod -R 777 container_run.sh
 
 # Start container
