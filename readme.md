@@ -97,10 +97,10 @@ docker build -t superodom-ros2:latest .
 
 ### Workspace Structure
 
-Ensure the following structure within `ros_ws/src`:
+Ensure the following structure within `ros2_ws/src`:
 
 ```
-ros_ws/src
+ros2_ws/src
 ├── super_odometry
 ├── livox_ros_driver2
 └── rviz_2d_overlay_plugins
@@ -112,22 +112,21 @@ You can download `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the fol
 
 > **Important**: Maintain this exact structure within `ros_ws/src`
 
-### Building the Workspace
-```bash
-cd livox_ros_driver2
-./build.sh humble 
-cd ~/ros_ws
-colcon build
-```
-
-## 🚀 5. Quick Start
-
 ### Container Setup
 ```bash
 # Allow Docker GUI access
 xhost +local:docker
+```
 
-# Make container script executable
+Go to `ros2_humble_docker/container_run.sh` and make sure you change exact directory path for `PROJECT_DIR` and `DATASET_DIR`
+```bash
+PROJECT_DIR="/path/to/your/superodom"
+DATASET_DIR="/path/to/your/dataset"
+```
+> **Important**: Maintain the same folder structure under `ros2_ws/src` for `PROJECT_DIR`
+
+Then launch docker container using the following:
+```bash
 sudo chmod -R 777 container_run.sh
 
 # Start container
@@ -140,7 +139,16 @@ docker exec --privileged -it superodom-ros2 /bin/bash
 source /opt/ros/humble/setup.bash
 ```
 
-### Launch SuperOdometry
+Build the workspace within container
+```bash
+cd ~/ros2_ws/src/livox_ros_driver2
+./build.sh humble 
+cd ~/ros2_ws
+colcon build
+```
+> **Important**: make sure you first build `livox_ros_driver2` 
+
+## 🚀 5. Launch SuperOdometry
 
 To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
 
