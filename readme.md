@@ -43,7 +43,7 @@
   <img src="./doc/uncertainty.gif" alt="Alignment Risk Prediction" width="800"/>
 </p>
 
-> 🔥 6 DOF degeneracy uncertainty detection. 
+> 🔥 6 DOF degeneracy uncertainty detection. We support visualization in both RVIZ and Rerun. 
 
 ## 📦 3. Installation
 > Highly recommend to check our docker files to run our code with step 4 and step 5. 
