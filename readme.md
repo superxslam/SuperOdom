@@ -27,10 +27,11 @@
   - Supports both localization and mapping modes
 - **Alignment Risk Prediction**
   - Provides alignment risk prediction for ICP algorithms
-- **ROS 2.0 Integration**
-  - Built on ROS 2 Humble for modern robotics development
 - **Degeneracy Awareness**
   - Robust detection of environmental degeneracy
+- **ROS 2.0 Integration**
+  - Built on ROS 2 Humble for modern robotics development
+
 
 ## 2. System Pipeline
 
@@ -81,6 +82,11 @@ make -j6 && sudo make install
 #### Install Ceres
 ```bash
 sudo apt-get install -y libceres-dev
+```
+
+#### Install Rerun
+```bash
+pip install rerun-sdk
 ```
 
 ## 🐳 4. Docker Setup
@@ -209,6 +215,17 @@ cd ~/ros_ws/src/SuperOdom/super_odometry
 rviz2 -d ros2.rviz
 ```
 
+(Alternative) Visualize in Rerun: 
+```bash
+# launch this in a new bash window
+docker exec --privileged -it superodom-ros2 /bin/bash
+source install/setup.bash
+cd ~/ros2_ws/src/SuperOdom/script/visualizers
+python3 rerun_visualizer.py
+# Open a new bash window on your local device
+rerun
+```
+
 We also provide tmux script for easy launch with dataset (this script only works after you build the workspace in docker): 
 ```bash
 cd script
@@ -281,7 +298,7 @@ This package is released under the GPLv3 license. For commercial use, please con
 
 ## 🙏 11. Acknowledgements
 
-Special thanks to Professor Ji Zhang, Professor Michael Kaess, Parv Maheshwari, Yuanjun Gao, Yaoyu Hu for their valuable advice. We also acknowledge these foundational works:
+Special thanks to Professor Ji Zhang, Professor Michael Kaess, Parv Maheshwari, Yuanjun Gao, Yaoyu Hu for their valuable advice. Thanks to Omar Alama for providing Rerun support. We also acknowledge these foundational works:
 
 - LOAM: Lidar Odometry and Mapping in Real-time (RSS 2014)
 - GTSAM: Georgia Tech Smoothing and Mapping Library

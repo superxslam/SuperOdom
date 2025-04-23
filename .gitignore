@@ -8,4 +8,10 @@
 ./build
 ./install
 ./log
-
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.pyw
+*.pyz
+*.pywz
