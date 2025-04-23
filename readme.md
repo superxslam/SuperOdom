@@ -215,7 +215,7 @@ cd ~/ros_ws/src/SuperOdom/super_odometry
 rviz2 -d ros2.rviz
 ```
 
-(Alternative) Visualize in Rerun: 
+(⭐ Alternative) Visualize in Rerun: 
 ```bash
 # launch this in a new bash window
 docker exec --privileged -it superodom-ros2 /bin/bash
