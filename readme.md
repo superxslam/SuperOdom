@@ -97,7 +97,7 @@ pip install rerun-sdk
 
 ### Building Docker Image
 ```bash
-cd docker
+cd ros2_humble_docker
 docker build -t superodom-ros2:latest .
 ```
 
