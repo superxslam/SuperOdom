@@ -32,11 +32,8 @@
 - **ROS 2.0 Integration**
   - Built on ROS 2 Humble for modern robotics development
 
-
-## 2. System Pipeline
-
 <p align="center">
-  <img src="./doc/superloc.png" alt="SuperLoc Pipeline" width="800"/>
+  <img src="./doc/degradtion.png" alt="Super Odometry Pipeline" width="800"/>
 </p>
 
 <p align="center">
