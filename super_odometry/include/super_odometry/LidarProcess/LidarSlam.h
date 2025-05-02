@@ -22,6 +22,8 @@
 #include <super_odometry_msgs/msg/optimization_stats.hpp>
 
 #include <sophus/se3.hpp>
+#include <std_msgs/msg/float32.hpp>
+
 // #include "super_odometry/LidarProcess/Utilities.h"
 #include "super_odometry/LidarProcess/factor/SE3AbsolutatePoseFactor.h"
 #include "super_odometry/LidarProcess/factor/lidarOptimization.h"
@@ -197,6 +199,13 @@ namespace super_odometry {
             double uncertainty_yaw;
         };
 
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pubUncertaintyX;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pubUncertaintyY;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pubUncertaintyZ;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pubUncertaintyRoll;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pubUncertaintyPitch;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr pubUncertaintyYaw;;
+
         struct OptimizationParameter {
             EIGEN_MAKE_ALIGNED_OPERATOR_NEW
             MatchingResult match_result;
@@ -271,9 +280,8 @@ namespace super_odometry {
 
         double LocalizationLineMaxDistInlier = 0.2;
  
-
-
         rclcpp::Node::SharedPtr node_;
+
 
 
     public:
@@ -292,7 +300,6 @@ namespace super_odometry {
 
         RegistrationError EstimateRegistrationError(ceres::Problem &problem, const double eigen_thresh);
 
-        
         void FeatureObservabilityAnalysis(pcaFeature &feature, const Eigen::Vector3d &pFinal, const Eigen::Vector3d &eigenvalues, 
                                           const Eigen::Vector3d &normal_direction, const Eigen::Vector3d &principal_direction);
 
@@ -391,7 +398,11 @@ namespace super_odometry {
 
         void analyzeFeatureObservability(pcaFeature &feature);
 
- 
+        void EstimateLidarUncertainty();
+
+        void publishUncertainty(double uncer_x, double uncer_y, double uncer_z,
+            double uncer_roll, double uncer_pitch, double uncer_yaw);
+        
         bool validateNeighborSearch( bool found,const std::vector<Point> &nearest_pts,
         const std::vector<float> &nearest_dist, OptimizationParameter &result);
 
