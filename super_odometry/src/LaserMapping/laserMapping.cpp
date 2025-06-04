@@ -8,6 +8,9 @@ double parameters[7] = {0, 0, 0, 0, 0, 0, 1};
 Eigen::Map<Eigen::Vector3d> t_w_curr(parameters);
 Eigen::Map<Eigen::Quaterniond> q_w_curr(parameters+3);
 
+Eigen::Vector3d vel_b;
+Eigen::Vector3d ang_vel_b;
+
 namespace super_odometry {
 
     laserMapping::laserMapping(const rclcpp::NodeOptions & options)
@@ -513,6 +516,14 @@ return PredictionSource::CONSTANT_VELOCITY;
         odomAftMapped.pose.pose.position.y = t_w_curr.y();
         odomAftMapped.pose.pose.position.z = t_w_curr.z();
 
+        odomAftMapped.twist.twist.linear.x = vel_b.x();
+        odomAftMapped.twist.twist.linear.y = vel_b.y();
+        odomAftMapped.twist.twist.linear.z = vel_b.z();
+
+        odomAftMapped.twist.twist.angular.x = ang_vel_b.x();
+        odomAftMapped.twist.twist.angular.y = ang_vel_b.y();
+        odomAftMapped.twist.twist.angular.z = ang_vel_b.z();
+
         nav_msgs::msg::Odometry laserOdomIncremental;
 
         if (initialization == false)
@@ -724,16 +735,34 @@ return PredictionSource::CONSTANT_VELOCITY;
         t_w_curr=slam.T_w_lidar.pos;
         T_w_lidar.rot=slam.T_w_lidar.rot;
         T_w_lidar.pos=slam.T_w_lidar.pos;
-        last_T_w_lidar=slam.T_w_lidar;
-        timeLaserOdometryPrev=timeLaserOdometry;
         startupCount=slam.startupCount;
         frameCount++;
         slam.frame_count=frameCount;
         slam.laser_imu_sync=laser_imu_sync;
         initialization = true;
+
+        // Calculate linear and angular velocity
+        double dt = timeLaserOdometry - timeLaserOdometryPrev;
+
+        if (dt > 1e-6) {  
+            Eigen::Vector3d vel_w = (t_w_curr - last_T_w_lidar.pos) / dt;
+            vel_b = q_w_curr.inverse() * vel_w;     
+
+            Eigen::Quaterniond dq = q_w_curr * last_T_w_lidar.rot.inverse();
+            Eigen::AngleAxisd angle_axis(dq);
+            Eigen::Vector3d ang_vel_w = angle_axis.axis() * angle_axis.angle() / dt;
+            ang_vel_b = q_w_curr.inverse() * ang_vel_w;
+        } else {
+            vel_b = Eigen::Vector3d::Zero();
+            ang_vel_b = Eigen::Vector3d::Zero();
+        }
+
         //2. Publish results 
         publishTopic();
-        
+
+        //3. Store current pose and time for next iteration
+        last_T_w_lidar = slam.T_w_lidar;
+        timeLaserOdometryPrev = timeLaserOdometry;
     }
 
     void laserMapping::process() {
