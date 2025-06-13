@@ -17,6 +17,9 @@ Panels:
         - /Image1/Topic1
         - /Path2
         - /PointCloud22
+        - /Confidence X1
+        - /Confidence Y1
+        - /Confidence Z1
       Splitter Ratio: 0.5
     Tree Height: 383
   - Class: rviz_common/Selection
@@ -61,8 +64,8 @@ Visualization Manager:
     - Alpha: 0.009999999776482582
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 2.80204176902771
-        Min Value: -0.772382915019989
+        Max Value: 8.401062965393066
+        Min Value: -3.128063440322876
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -166,11 +169,7 @@ Visualization Manager:
         All Enabled: false
         map:
           Value: true
-        os_sensor:
-          Value: true
         sensor:
-          Value: true
-        spot_body_dummy:
           Value: true
       Marker Scale: 3
       Name: TF
@@ -247,7 +246,7 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: false
       Size (Pixels): 3
-      Size (m): 0.10000000149011612
+      Size (m): 0.009999999776482582
       Style: Flat Squares
       Topic:
         Depth: 5
@@ -259,6 +258,174 @@ Visualization Manager:
       Use Fixed Frame: true
       Use rainbow: true
       Value: true
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Confidence X
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /uncertainty_X
+      Value: true
+      auto color change: false
+      background color: 0; 0; 0
+      backround alpha: 0
+      clockwise rotate direction: false
+      foreground alpha: 0.699999988079071
+      foreground alpha 2: 0.4000000059604645
+      foreground color: 25; 255; 240
+      left: 128
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 1
+      med color: 255; 0; 0
+      med color change threthold: 0
+      min value: 0
+      show caption: true
+      size: 120
+      text size: 10
+      top: 30
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Confidence Y
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /uncertainty_Y
+      Value: true
+      auto color change: false
+      background color: 0; 0; 0
+      backround alpha: 0
+      clockwise rotate direction: false
+      foreground alpha: 0.699999988079071
+      foreground alpha 2: 0.4000000059604645
+      foreground color: 25; 255; 240
+      left: 278
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 1
+      med color: 255; 0; 0
+      med color change threthold: 0
+      min value: 0
+      show caption: true
+      size: 120
+      text size: 10
+      top: 30
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Confidence Z
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /uncertainty_Z
+      Value: true
+      auto color change: false
+      background color: 0; 0; 0
+      backround alpha: 0
+      clockwise rotate direction: false
+      foreground alpha: 0.699999988079071
+      foreground alpha 2: 0.4000000059604645
+      foreground color: 25; 255; 240
+      left: 428
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 1
+      med color: 255; 0; 0
+      med color change threthold: 0
+      min value: 0
+      show caption: true
+      size: 120
+      text size: 10
+      top: 30
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Confidence Roll
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /uncertainty_roll
+      Value: true
+      auto color change: false
+      background color: 0; 0; 0
+      backround alpha: 0
+      clockwise rotate direction: false
+      foreground alpha: 0.699999988079071
+      foreground alpha 2: 0.4000000059604645
+      foreground color: 25; 255; 240
+      left: 578
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 1
+      med color: 255; 0; 0
+      med color change threthold: 0
+      min value: 0
+      show caption: true
+      size: 120
+      text size: 10
+      top: 30
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Confidence Pitch
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /uncertainty_pitch
+      Value: true
+      auto color change: false
+      background color: 0; 0; 0
+      backround alpha: 0
+      clockwise rotate direction: false
+      foreground alpha: 0.699999988079071
+      foreground alpha 2: 0.4000000059604645
+      foreground color: 25; 255; 240
+      left: 728
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 1
+      med color: 255; 0; 0
+      med color change threthold: 0
+      min value: 0
+      show caption: true
+      size: 120
+      text size: 10
+      top: 30
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Confidence Yaw
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /uncertainty_yaw
+      Value: true
+      auto color change: false
+      background color: 0; 0; 0
+      backround alpha: 0
+      clockwise rotate direction: false
+      foreground alpha: 0.699999988079071
+      foreground alpha 2: 0.4000000059604645
+      foreground color: 25; 255; 240
+      left: 878
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 1
+      med color: 255; 0; 0
+      med color change threthold: 0
+      min value: 0
+      show caption: true
+      size: 120
+      text size: 10
+      top: 30
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48
@@ -305,25 +472,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 94.3961181640625
+      Distance: 27.9553279876709
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: 24.524185180664062
-        Y: -17.928491592407227
-        Z: 1.1722266674041748
+        X: -6.575400352478027
+        Y: -1.249847173690796
+        Z: 0.881053626537323
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5697963237762451
+      Pitch: 1.544796347618103
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz)
-      Yaw: 0.029621832072734833
+      Yaw: 1.300196647644043
     Saved: ~
 Window Geometry:
   Displays:

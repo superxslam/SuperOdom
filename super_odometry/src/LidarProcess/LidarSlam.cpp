@@ -10,15 +10,21 @@ Eigen::Map<Eigen::Quaterniond> Q_w_curr(pose_parameters + 3);
 
 namespace super_odometry {
 
+
     LidarSLAM::LidarSLAM() {
         EdgesPoints.reset(new PointCloud());
         PlanarsPoints.reset(new PointCloud());
         WorldEdgesPoints.reset(new PointCloud());
         WorldPlanarsPoints.reset(new PointCloud());
-    
     }
     void LidarSLAM::initROSInterface(rclcpp::Node::SharedPtr node) {
         node_ = node;
+        pubUncertaintyX=node_->create_publisher<std_msgs::msg::Float32>(ProjectName+"uncertainty_X", 1);
+        pubUncertaintyY=node_->create_publisher<std_msgs::msg::Float32>(ProjectName+"uncertainty_Y", 1);
+        pubUncertaintyZ=node_->create_publisher<std_msgs::msg::Float32>(ProjectName+"uncertainty_Z", 1);
+        pubUncertaintyRoll=node_->create_publisher<std_msgs::msg::Float32>(ProjectName+"uncertainty_roll", 1);
+        pubUncertaintyPitch=node_->create_publisher<std_msgs::msg::Float32>(ProjectName+"uncertainty_pitch", 1);
+        pubUncertaintyYaw=node_->create_publisher<std_msgs::msg::Float32>(ProjectName+"uncertainty_yaw", 1);
     }
 
     void LidarSLAM::Localization(
@@ -39,9 +45,9 @@ namespace super_odometry {
        if(!initialization){
         initializeMapping(timeLaserOdometry);
        } else{
+        EstimateLidarUncertainty();
         performLocalizationAndMapping(predictodom, timeLaserOdometry); 
        }
-
     }
      
     void LidarSLAM::initializeState(bool initialization, const Transformd&position){
@@ -113,6 +119,7 @@ namespace super_odometry {
         for (size_t icp_iter=0; icp_iter<LocalizationICPMaxIter; ++icp_iter){
         //Extract features 
         int edge_num=0; int planner_num=0;
+        ResetDistanceParameters();
         super_odometry_msgs::msg::IterationStats iter_stats;
 
         tbb::concurrent_vector<OptimizationParameter> feature_corres;
@@ -123,8 +130,7 @@ namespace super_odometry {
       
         auto problem=setupOptimizationProblem(feature_corres, predictodom, T_w_initial_guess);
         auto summary=solveOptimizationProblem(problem);
-
-
+        
         //Update pose estimates 
         T_w_lidar.pos=T_w_curr;
         T_w_lidar.rot=Q_w_curr;
@@ -140,7 +146,7 @@ namespace super_odometry {
         }
 
       }
-    
+      
       //post-optimization processing 
       performPostOptimizationProcessing(timeLaserOdometry, t_opt, stats);
     }
@@ -486,8 +492,6 @@ LidarSLAM::OptimizationParameter LidarSLAM::processLineResults(
     return result;
 }   
 
-
-
 bool LidarSLAM::validateNeighborSearch(
         bool found,
         const std::vector<Point> &nearest_pts,
@@ -506,8 +510,6 @@ bool LidarSLAM::validateNeighborSearch(
 
     return true;
 }
-
-
 
 LidarSLAM::OptimizationParameter LidarSLAM::ComputePlaneDistanceParameters(
             LocalMap &local_map, const Point &p) {
@@ -541,7 +543,6 @@ LidarSLAM::OptimizationParameter LidarSLAM::ComputePlaneDistanceParameters(
         return result;
     }
 
-
     // 5. Validate and compute quality metrics
     double meanSquareDist = computePlaneQualityMetrics(nearest_pts, plane_normal, 
                                                       negative_OA_dot_norm, result);
@@ -550,7 +551,6 @@ LidarSLAM::OptimizationParameter LidarSLAM::ComputePlaneDistanceParameters(
     }
     
     // 6. Check normal direction
-
     Eigen::Vector3d correct_normal;
     Eigen::Vector3d curr_point(pFinal.x(), pFinal.y(), pFinal.z());
     Eigen::Vector3d viewpoint_direction = curr_point;
@@ -563,14 +563,13 @@ LidarSLAM::OptimizationParameter LidarSLAM::ComputePlaneDistanceParameters(
     // 7. Compute feature observability
     pcaFeature feature;
     FeatureObservabilityAnalysis(
-                feature, pFinal, correct_normal, correct_normal, eigenvectors.col(2));
-    //computeFeatureObservability(feature, pFinal, eigenvalues, correct_normal, eigenvectors.col(2));
+                feature, pFinal, eigenvalues, correct_normal, eigenvectors.col(2));
+
     double fitQualityCoeff = 1.0 - sqrt(meanSquareDist / square_max_dist);
     // 8. Set result parameters
     setPlaneResults(result, mean, pInit, plane_normal, negative_OA_dot_norm, feature, fitQualityCoeff);
     return result;
 }
-
 
 void LidarSLAM::FeatureObservabilityAnalysis(pcaFeature &feature, const Eigen::Vector3d &pFinal, 
                                           const Eigen::Vector3d &eigenvalues, 
@@ -600,8 +599,6 @@ void LidarSLAM::FeatureObservabilityAnalysis(pcaFeature &feature, const Eigen::V
     // 5. Analyze feature quality and observability
     analyzeFeatureObservability(feature);
 }
-
-
 
 void LidarSLAM::computeEigenProperties(pcaFeature &feature, const Eigen::Vector3d &eigenvalues) {
     // Compute square roots of eigenvalues
@@ -670,7 +667,6 @@ void LidarSLAM::analyzeFeatureObservability(pcaFeature &feature) {
         {feature.ty_dot, Feature_observability::ty_dot},
         {feature.tz_dot, Feature_observability::tz_dot}
     };
-    
     // Sort quality measures
     std::sort(rotation_quality.begin(), rotation_quality.end(), utils::compare_pair_first);
     std::sort(trans_quality.begin(), trans_quality.end(), utils::compare_pair_first);
@@ -695,11 +691,6 @@ void LidarSLAM::computeCrossProducts(pcaFeature &feature, const RotatedAxes &axe
     feature.rz_cross = cross.dot(axes.z);
     feature.neg_rz_cross = -feature.rz_cross;
 }
-
-
-
-
-
 
 void LidarSLAM::setPlaneResults(OptimizationParameter &result, const Eigen::Vector3d &mean, 
                                const Eigen::Vector3d &pInit, const Eigen::Vector3d &plane_normal, 
@@ -920,5 +911,108 @@ double LidarSLAM::computePlaneQualityMetrics(const std::vector<Point>& nearest_p
     
     T_w_lidar.rot = correct_rot.normalized();
    }
+
+   void LidarSLAM::EstimateLidarUncertainty() {
+        //uncertainty x
+        double TotalTransFeature = PlaneFeatureHistogramObs.at(6) +
+                                   PlaneFeatureHistogramObs.at(7) +
+                                   PlaneFeatureHistogramObs.at(8);
+        
+        //uncertainty x
+        double uncertaintyX = (PlaneFeatureHistogramObs.at(6) / TotalTransFeature) * 3;
+        lidarOdomUncer.uncertainty_x = std::min(uncertaintyX, 1.0);
+
+        //uncertainty y
+        double uncertaintyY = (PlaneFeatureHistogramObs.at(7) / TotalTransFeature) * 3;
+        lidarOdomUncer.uncertainty_y = std::min(uncertaintyY, 1.0);
+
+        //uncertainty Z
+        double uncertaintyZ = (PlaneFeatureHistogramObs.at(8) / TotalTransFeature) * 3;
+        lidarOdomUncer.uncertainty_z = std::min(uncertaintyZ, 1.0);
+
+        double TotalRotationFeature = PlaneFeatureHistogramObs.at(0) +
+                                      PlaneFeatureHistogramObs.at(1) +
+                                      PlaneFeatureHistogramObs.at(2) +
+                                      PlaneFeatureHistogramObs.at(3) +
+                                      PlaneFeatureHistogramObs.at(4) +
+                                      PlaneFeatureHistogramObs.at(5);
+
+        //uncertainty roll
+        double uncertaintyRoll =
+                (PlaneFeatureHistogramObs.at(0) + PlaneFeatureHistogramObs.at(1)) / TotalRotationFeature * 3;
+        lidarOdomUncer.uncertainty_roll = std::min(uncertaintyRoll, 1.0);
+
+        //uncertainty pitch
+        double uncertaintyPitch =
+                (PlaneFeatureHistogramObs.at(2) + PlaneFeatureHistogramObs.at(3)) / TotalRotationFeature * 3;
+        lidarOdomUncer.uncertainty_pitch = std::min(uncertaintyPitch, 1.0);
+
+        //uncertainty yaw
+        double uncertaintyYaw =
+                (PlaneFeatureHistogramObs.at(4) + PlaneFeatureHistogramObs.at(5)) / TotalRotationFeature * 3;
+        lidarOdomUncer.uncertainty_yaw = std::min(uncertaintyYaw, 1.0);
+
+              
+        if(TotalTransFeature==0 || TotalRotationFeature==0)
+        {
+          lidarOdomUncer.uncertainty_x=0;
+          lidarOdomUncer.uncertainty_y=0;
+          lidarOdomUncer.uncertainty_z=0;
+          lidarOdomUncer.uncertainty_roll=0;
+          lidarOdomUncer.uncertainty_pitch=0;
+          lidarOdomUncer.uncertainty_yaw=0;   
+        }
+
+        publishUncertainty(lidarOdomUncer.uncertainty_x, lidarOdomUncer.uncertainty_y, lidarOdomUncer.uncertainty_z,
+                                     lidarOdomUncer.uncertainty_roll, lidarOdomUncer.uncertainty_pitch, lidarOdomUncer.uncertainty_yaw);
+
+        stats.uncertainty_x=lidarOdomUncer.uncertainty_x;
+        stats.uncertainty_y=lidarOdomUncer.uncertainty_y;
+        stats.uncertainty_z=lidarOdomUncer.uncertainty_z;
+        stats.uncertainty_roll=lidarOdomUncer.uncertainty_roll;
+        stats.uncertainty_pitch=lidarOdomUncer.uncertainty_pitch;
+        stats.uncertainty_yaw=lidarOdomUncer.uncertainty_yaw;
+
+        // if (lidarOdomUncer.uncertainty_x<0.2 or lidarOdomUncer.uncertainty_y<0.1 or lidarOdomUncer.uncertainty_z<0.2) {
+        //     isDegenerate = true;
+
+        // }else if (PlaneFeatureHistogramObs.at(6)<20 or PlaneFeatureHistogramObs.at(7)<10 or PlaneFeatureHistogramObs.at(8)<10)
+        // {
+        //     isDegenerate = true;   
+        // }
+        // else {
+        //     isDegenerate = false;
+        // }
+    }
+
+    void LidarSLAM::publishUncertainty(double uncer_x, double uncer_y, double uncer_z,
+        double uncer_roll, double uncer_pitch, double uncer_yaw)
+    {
+
+        std_msgs::msg::Float32 uncertainty_x;
+        uncertainty_x.data = uncer_x;
+        pubUncertaintyX->publish(uncertainty_x);
+
+        std_msgs::msg::Float32 uncertainty_y;
+        uncertainty_y.data = uncer_y;
+        pubUncertaintyY->publish(uncertainty_y);
+
+        std_msgs::msg::Float32 uncertainty_z;
+        uncertainty_z.data = uncer_z;
+        pubUncertaintyZ->publish(uncertainty_z);
+
+        std_msgs::msg::Float32 uncertainty_roll;
+        uncertainty_roll.data = uncer_roll;
+        pubUncertaintyRoll->publish(uncertainty_roll);
+
+        std_msgs::msg::Float32 uncertainty_pitch;
+        uncertainty_pitch.data = uncer_pitch;
+        pubUncertaintyPitch->publish(uncertainty_pitch);
+
+        std_msgs::msg::Float32 uncertainty_yaw;
+        uncertainty_yaw.data = uncer_yaw;
+        pubUncertaintyYaw->publish(uncertainty_yaw);
+
+    };
 
 } /* super_odometry */
