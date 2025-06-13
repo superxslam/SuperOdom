@@ -6,8 +6,8 @@ extrinsicRotation_imu_laser: !!opencv-matrix
   cols: 3
   dt: d  
   data: [1., 0., 0.,
-        0., 1., 0.,
-        0., 0., 1.]
+        0., -1., 0.,
+        0., 0., -1.]
   # data: [-1., 0., 0.,
   #       0., 1., 0.,
   #       0., 0., -1.]
@@ -17,8 +17,8 @@ extrinsicTranslation_imu_laser: !!opencv-matrix
   rows: 3
   cols: 1
   dt: d
-  # data: [0.0, 0.0, 0.0]
-  data: [0.080, 0.029, 0.030]
+  data: [0.0, 0.0, 0.0]
+  # data: [0.080, 0.029, 0.030]
 
 
 imu_laser_rotation_offset: !!opencv-matrix

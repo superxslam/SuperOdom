@@ -286,13 +286,15 @@ namespace super_odometry {
         // insert predicted values
         gtsam::NavState propState_ =
                 imuIntegratorOpt_->predict(prevState_, prevBias_);
-        auto diff  = curPose.translation() - propState_.pose().translation();
+        // auto diff  = curPose.translation() - propState_.pose().translation();
 
-        gtsam::PriorFactor<gtsam::Pose3> pose_factor(X(key), curPose,
-                                                     correctionNoise);
-        graphFactors.add(pose_factor);
-                // add imu factor to graph
-        
+        // gtsam::PriorFactor<gtsam::Pose3> pose_factor(X(key), curPose,
+        //                                              correctionNoise);
+        // graphFactors.add(pose_factor);
+        gtsam::Pose3 relPose = prevPose_.between(curPose);  
+        graphFactors.add(gtsam::BetweenFactor<gtsam::Pose3>(
+                X(key - 1), X(key), relPose, correctionNoise));
+                
         const gtsam::PreintegratedImuMeasurements &preint_imu =
                 dynamic_cast<const gtsam::PreintegratedImuMeasurements &>(
                         *imuIntegratorOpt_);
