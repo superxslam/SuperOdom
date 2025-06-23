@@ -51,7 +51,7 @@
 - Eigen
 - [Sophus](https://github.com/strasdat/Sophus)
 - [GTSAM (4.0.2 or 4.1)](https://github.com/borglab/gtsam)
-- [Ceres Solver](http://ceres-solver.org/)
+- [Ceres Solver (2.1.0)](http://ceres-solver.org/)
 
 ### Dependencies Installation
 
@@ -78,7 +78,14 @@ make -j6 && sudo make install
 
 #### Install Ceres
 ```bash
-sudo apt-get install -y libceres-dev
+git clone https://github.com/ceres-solver/ceres-solver.git
+cd ceres-solver
+git checkout f68321e7de8929fbcdb95dd42877531e64f72f66
+mkdir build
+cd build
+cmake ..
+make -j8  # Use number of cores you have, e.g., -j8 for 8 cores
+sudo make install
 ```
 
 #### Install Rerun
