@@ -207,7 +207,7 @@ Play your ROS2 dataset:
 docker exec --privileged -it superodom-ros2 /bin/bash
 source install/setup.bash
 cd ~/data
-ros2 play $(YOUR_ROS2_DATASET)
+ros2 bag play $(YOUR_ROS2_DATASET)
 ```
 
 Visualize in RVIZ2: 
@@ -215,7 +215,7 @@ Visualize in RVIZ2:
 # launch this in a new bash window
 docker exec --privileged -it superodom-ros2 /bin/bash
 source install/setup.bash
-cd ~/ros_ws/src/SuperOdom/super_odometry
+cd ~/ros2_ws/src/SuperOdom/super_odometry
 rviz2 -d ros2.rviz
 ```
 
