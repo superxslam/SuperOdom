@@ -17,6 +17,33 @@
 
 > 🔥 The system has been widely tested on above platforms equipped with Livox, Velodyne and Ouster LiDAR. 
 
+
+## 📋 Table of Contents
+
+0. [Common building Issues](solution.md)
+1. [Introduction](#superodometry-lightweight-lidar-inertial-odometry-and-mapping)
+2. [🔥 Key Features](#-1-key-features)
+3. [📦 Installation](#-3-installation)
+   - [System Requirements](#system-requirements)
+   - [Dependencies Installation](#dependencies-installation)
+4. [🐳 Docker Setup](#-4-docker-setup)
+   - [Prerequisites](#prerequisites)
+   - [Building Docker Image](#building-docker-image)
+   - [Workspace Structure](#workspace-structure)
+   - [Docker Container Setup](#docker-container-setup)
+5. [🚀 Launch SuperOdometry](#-5-launch-superodometry)
+   - [Dataset Setup](#dataset-setup)
+   - [Configuration](#configuration)
+   - [Launch Commands](#launch-commands)
+   - [Visualization (RVIZ2 & Rerun)](#visualization-rviz2--rerun)
+6. [📍 Localization Mode Configuration](#-localization-mode-configuration)
+7. [📚 Citations](#-8-citations)
+8. [🛠️ Next Plan](#9-next-plan)
+9. [📝 License](#-10-license)
+10. [🙏 Acknowledgements](#-11-acknowledgements)
+
+
+
 ## 🔥 1. Key Features
 
 - **Multi-LiDAR Support**
