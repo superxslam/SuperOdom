@@ -194,6 +194,8 @@ colcon build
 
 To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
 
+To convert Velodyne packet message into `sensor_msgs/PointCloud2`, you can follow this [tutorial link](https://github.com/superxslam/ICCV2023_SLAM_Challenge?tab=readme-ov-file#instructions-for-running-velodyne-driver)
+
 For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
 
 For user-defined topic names, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
