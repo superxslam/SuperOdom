@@ -79,7 +79,7 @@ set(GTSAM_LIBRARIES gtsam)
 # SuperOdom Library
 add_library(SuperOdomLib SHARED
   src/FeatureExtraction/featureExtraction.cpp
-  src/ImuPreintegration/imuPreintegration.cpp
+  src/ImuPreintegration/imuPreintegration_relative.cpp
   src/LaserMapping/laserMapping.cpp
   src/LaserMapping/lidarOptimization.cpp
   src/LaserMapping/LocalMap.cpp
