@@ -2,7 +2,7 @@
 // Created by shibo zhao on 2020-09-27.
 //
 #include "rclcpp/rclcpp.hpp"
-#include "super_odometry/ImuPreintegration/imuPreintegration.h"
+#include "super_odometry/ImuPreintegration/imuPreintegration_relative.h"
 
 int main(int argc, char **argv)
 {
