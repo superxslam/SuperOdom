@@ -190,7 +190,7 @@ namespace super_odometry {
             RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000,
                                 "very small motion, not accumulating. %f", stats.translation_from_last);
         }
-    acceptResult = true;
+    // acceptResult = true;
     return acceptResult;
 }
 
@@ -229,7 +229,7 @@ namespace super_odometry {
 
     ceres::Solver::Summary LidarSLAM::solveOptimizationProblem(ceres::Problem&problem){
         ceres::Solver::Options options;
-        options.max_num_iterations=4;
+        options.max_num_iterations=8;
         options.linear_solver_type=ceres::DENSE_QR;
         options.minimizer_progress_to_stdout=false;
         options.check_gradients=false;
