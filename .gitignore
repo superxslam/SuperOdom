@@ -15,3 +15,8 @@ __pycache__
 *.pyw
 *.pyz
 *.pywz
+build
+log
+install
+scripts/superodom_stats
+

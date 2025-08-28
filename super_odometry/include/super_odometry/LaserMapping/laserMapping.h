@@ -217,7 +217,7 @@ namespace super_odometry {
 
         int frameCount = 0;
         int waiting_takeoff_timeout = 300;
-        int startupCount = 10;
+        int startupCount = 3;
         int localizationCount = 0;
         int laserCloudValidInd[125];
         int laserCloudSurroundInd[125];

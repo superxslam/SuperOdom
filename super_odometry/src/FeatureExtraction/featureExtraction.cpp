@@ -563,11 +563,12 @@ namespace super_odometry {
             Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * measurement.gyr;
             Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * measurement.accel;
             imudata->acc = accel * gravity / imu_Init->acc_mean.norm();
+            imudata->gyr = gyr;
         } else {
             imudata->acc = measurement.accel;
+            imudata->gyr = measurement.gyr;
         }
         
-        imudata->gyr = measurement.gyr;
         return imudata;
     }
 

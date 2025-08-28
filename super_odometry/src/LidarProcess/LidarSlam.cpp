@@ -112,7 +112,7 @@ namespace super_odometry {
         //Check if we have enough features for optimization 
         if(!hasEnoughFeatures()){
             RCLCPP_WARN(node_->get_logger(), "Not enough features for optimization");
-            return;
+            //return;
         }
         //Perform ICP iteration 
         TicToc t_opt;

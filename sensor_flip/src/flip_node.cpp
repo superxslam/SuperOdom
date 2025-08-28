@@ -15,7 +15,7 @@ public:
     // Parameters
     lidar_in_ = declare_parameter<std::string>("lidar_in", "/livox/lidar");
     imu_in_ = declare_parameter<std::string>("imu_in", "/livox/imu");
-  lidar_out_ = declare_parameter<std::string>("lidar_out", "/livox_flipped/lidar");
+    lidar_out_ = declare_parameter<std::string>("lidar_out", "/livox_flipped/lidar");
     imu_out_ = declare_parameter<std::string>("imu_out", "/livox_flipped/imu");
     double roll_deg = declare_parameter<double>("roll_deg", 180.0);
     double pitch_deg = declare_parameter<double>("pitch_deg", 0.0);

@@ -369,7 +369,7 @@ namespace super_odometry {
     void imuPreintegration::process_imu_odometry(double currentCorrectionTime, gtsam::Pose3 relativePose) {
 
         // reset graph for speed
-        if (key > 100) {
+        if (key > 30) {
             reset_graph();
         }
 
@@ -613,14 +613,15 @@ namespace super_odometry {
 
 
 void imuPreintegration::correctLivoxGravity(sensor_msgs::msg::Imu& thisImu) {
-    const double gravity = 9.8105;
-    Eigen::Vector3d acc(thisImu.linear_acceleration.x,
-                       thisImu.linear_acceleration.y,
-                       thisImu.linear_acceleration.z);
-    acc = acc * gravity / imu_Init->acc_mean.norm();
-    thisImu.linear_acceleration.x = acc.x();
-    thisImu.linear_acceleration.y = acc.y();
-    thisImu.linear_acceleration.z = acc.z();
+
+        const double gravity = 9.8105;
+        Eigen::Vector3d acc(thisImu.linear_acceleration.x,
+                           thisImu.linear_acceleration.y,
+                           thisImu.linear_acceleration.z);
+        acc = acc * gravity / imu_Init->acc_mean.norm();
+        thisImu.linear_acceleration.x = acc.x();
+        thisImu.linear_acceleration.y = acc.y();
+        thisImu.linear_acceleration.z = acc.z();
 }
 
 
@@ -645,7 +646,7 @@ void imuPreintegration::publishOdometry(
     
     prepareOdometryMessage(odometry, thisImu, currentState);
     
-    if (frame_count++ % 4 == 0) {
+    if (frame_count++ % 1 == 0) {
         pubImuOdometry->publish(odometry);
     }
 
@@ -681,7 +682,7 @@ void imuPreintegration::publishTransform(nav_msgs::msg::Odometry &odometry, cons
     q.setZ(odometry.pose.pose.orientation.z);
     transform.setRotation(q);
     transform_stamped_.transform = tf2::toMsg(transform);
-    if(frame_count%4==0)
+    if(frame_count%1==0)
         br.sendTransform(transform_stamped_);
 }
 

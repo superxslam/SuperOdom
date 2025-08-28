@@ -41,6 +41,7 @@ RUN apt-get install -y ros-humble-tf2 ros-humble-cv-bridge ros-humble-pcl-conver
     ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros
 
 RUN apt-get install -y libceres-dev 
+RUN apt-get install -y python3-ament-package 
     
 
 RUN apt-get install -y python-tk python3-pip
@@ -64,6 +65,10 @@ WORKDIR /root/Livox-SDK2
 RUN mkdir build
 WORKDIR /root/Livox-SDK2/build
 RUN cmake .. && make -j2 && make install
+
+## Missing livox ros2 driver
+
+
 
 WORKDIR /root/
 RUN git clone http://github.com/strasdat/Sophus.git \
@@ -89,6 +94,8 @@ RUN pip install rerun-sdk
 RUN pip install numpy==1.24.3 matplotlib==3.7.1
 RUN pip install --upgrade packaging
 RUN pip3 install torch --ignore-installed
+RUN apt-get update && apt-get install -y ros-humble-ament-cmake
+RUN apt-get install -y tmuxp
 
 
 WORKDIR /root/ros2_ws

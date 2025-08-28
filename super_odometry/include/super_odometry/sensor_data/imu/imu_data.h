@@ -129,8 +129,47 @@ public:
     //     imu_frequency = Num / total_time_span;
     // }
     
-    //TODO: double check the gravity direction
-    gravity= - acc_mean / acc_mean.norm() *Gravity_Norm;
+    // Replace line 133 with this automatic detection:
+Eigen::Vector3d gravity_direction = acc_mean / acc_mean.norm();
+
+// Check which axis has the dominant gravity component
+double abs_x = std::abs(gravity_direction.x());
+double abs_y = std::abs(gravity_direction.y());
+double abs_z = std::abs(gravity_direction.z());
+
+// Find the dominant axis
+int dominant_axis = 0;  // 0=x, 1=y, 2=z
+double max_component = abs_x;
+if (abs_y > max_component) {
+    max_component = abs_y;
+    dominant_axis = 1;
+}
+if (abs_z > max_component) {
+    max_component = abs_z;
+    dominant_axis = 2;
+}
+
+// Determine gravity direction based on dominant axis
+if (dominant_axis == 2) {  // Z-axis dominant
+    // Check if Z component is positive or negative
+    if (gravity_direction.z() > 0) {
+        // Z is pointing down (flipped sensor)
+        gravity = gravity_direction * Gravity_Norm;
+    } else {
+        // Z is pointing up (normal sensor)
+        gravity = -gravity_direction * Gravity_Norm;
+    }
+} else {
+    // X or Y dominant - use the original logic
+    gravity = -gravity_direction * Gravity_Norm;
+}
+
+// Add debug output
+std::cout << "Gravity Direction Detection:" << std::endl;
+std::cout << "  Dominant axis: " << (dominant_axis == 0 ? "X" : dominant_axis == 1 ? "Y" : "Z") << std::endl;
+std::cout << "  Gravity direction: " << gravity_direction.transpose() << std::endl;
+std::cout << "  Final gravity: " << gravity.transpose() << std::endl;
+
     gyr_bias = gyr_mean;
     acc_bias = acc_mean;
     first_imu = false;
