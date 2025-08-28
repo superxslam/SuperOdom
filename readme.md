@@ -69,9 +69,9 @@
 
 > 🔥 6 DOF degeneracy uncertainty detection. We support visualization in both RVIZ and Rerun. 
 
-## 📦 3. Installation
+## 📦 3. Installation without docker
 > Highly recommend to check our docker files to run our code with step 4 and step 5. 
-### System Requirements
+### System Requirements for Installation on Host machine.
 
 - ROS2 Humble
 - PCL
@@ -80,47 +80,40 @@
 - [GTSAM (4.0.2 or 4.1)](https://github.com/borglab/gtsam)
 - [Ceres Solver (2.1.0)](http://ceres-solver.org/)
 
+### Workspace Structure
+
+First create your own local ROS2 workspace and clone `SuperOdom`: 
+```bash
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/superxslam/SuperOdom
+```
+Clone respective repos and ensure they follow this exact structure under `ros2_ws/src`:
+
+```
+ros2_ws/src
+├── SuperOdom
+├── livox_ros_driver2
+
+``` 
+
+ **Important**: Maintain this exact structure within `ros_ws/src`
 ### Dependencies Installation
 
-#### Install Sophus
+We provide a bash script which will setup the project on your host system.
+> if you plan to use docker, you don't need to run follwing steps and directly check next section`
+
+`SuperOdom`: 
 ```bash
-git clone http://github.com/strasdat/Sophus.git
-cd Sophus && git checkout 97e7161
-mkdir build && cd build
-cmake .. -DBUILD_TESTS=OFF
-make -j8 && sudo make install
+mkdir -p ~/ros2_ws/src
+cd ~/ros2_ws/src
+git clone https://github.com/superxslam/SuperOdom
+cd SuperOdom
+sudo chmod +x install_deps.sh && ./install_deps.sh
+
 ```
 
-#### Install GTSAM
-```bash
-git clone https://github.com/borglab/gtsam.git
-cd gtsam && git checkout 4abef92
-mkdir build && cd build
-cmake \
-  -DGTSAM_USE_SYSTEM_EIGEN=ON \
-  -DGTSAM_BUILD_WITH_MARCH_NATIVE=OFF \
-  ..
-make -j6 && sudo make install
-```
-
-#### Install Ceres
-```bash
-git clone https://github.com/ceres-solver/ceres-solver.git
-cd ceres-solver
-git checkout f68321e7de8929fbcdb95dd42877531e64f72f66
-mkdir build
-cd build
-cmake ..
-make -j8  # Use number of cores you have, e.g., -j8 for 8 cores
-sudo make install
-```
-
-#### Install Rerun
-```bash
-pip install rerun-sdk
-```
-
-## 🐳 4. Docker Setup
+## 🐳 4. Installation with docker
 
 ### Prerequisites
 - [Docker](https://www.docker.com/)
@@ -145,9 +138,9 @@ Clone respective repos and ensure they follow this exact structure under `ros2_w
 ros2_ws/src
 ├── SuperOdom
 ├── livox_ros_driver2
-└── rviz_2d_overlay_plugins
+├──rviz_2d_overlay_plugins (optional)
 ```
-You can clone `livox_ros_driver2` and `rviz_2d_overlay_plugins` using the following link:
+You can clone `livox_ros_driver2` and `rviz_2d_overlay_plugins (optional)` using the following link:
 
 - [Livox-ROS-driver2](https://github.com/Livox-SDK/livox_ros_driver2)
 - [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
@@ -161,8 +154,9 @@ xhost +local:docker
 ```
 
 Go to `ros2_humble_docker/container_run.sh` and make sure you change exact directory path for `PROJECT_DIR` and `DATASET_DIR`
+to mount these directory to docker
 ```bash
-PROJECT_DIR="/path/to/your/superodom"
+PROJECT_DIR="/path/to/your/superodom"   
 DATASET_DIR="/path/to/your/dataset"
 ```
 > **Important**: `PROJECT_DIR` should be the exact directory to `ros2_ws/src`
@@ -176,8 +170,7 @@ sudo chmod -R 777 container_run.sh
 # Start container
 ./container_run.sh superodom-ros2 superodom-ros2:latest
 
-# Source ROS2
-source /opt/ros/humble/setup.bash
+
 ```
 > **Important**: To access container, you can open a new bash window and run `docker exec --privileged -it superodom-ros2 /bin/bash` 
 
@@ -189,6 +182,14 @@ cd ~/ros2_ws
 colcon build --symlink-install
 ```
 > **Important**: make sure you first build `livox_ros_driver2` 
+
+### Launch the SLAM for humanoid robots
+
+```bash
+cd script
+tmuxp load humanoid.yaml
+```
+
 
 ## 🚀 5. Launch SuperOdometry
 
@@ -262,7 +263,7 @@ rerun
 We also provide tmux script for easy launch with dataset (this script only works after you build the workspace in docker): 
 ```bash
 cd script
-tmuxp load run.yaml
+tmuxp load humanoid.yaml
 ```
 
 ## 📍 Localization Mode Configuration
