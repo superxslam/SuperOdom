@@ -178,7 +178,7 @@ public:
     Roll_Pitch_Gravity_Matrix=calculatePitchRollMatrix(acc_mean.x(), 
     acc_mean.y(), acc_mean.z());
     
-    bool use_gravity_aligned_extrinsics=false;
+    bool use_gravity_aligned_extrinsics=true;
     if(use_gravity_aligned_extrinsics){
         imu_laser_R_Gravity=Roll_Pitch_Gravity_Matrix.inverse()*imu_laser_R;
     }else{
