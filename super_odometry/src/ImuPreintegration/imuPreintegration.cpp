@@ -313,7 +313,6 @@ namespace super_odometry {
         bool systemSolvedSuccessfully = false;
         try {
             optimizer.update(graphFactors, graphValues);
-            optimizer.update();
             systemSolvedSuccessfully = true;
         }
         catch (const gtsam::IndeterminantLinearSystemException &) {
@@ -389,7 +388,14 @@ namespace super_odometry {
         }
 
         // 4. reprogate_imuodometry
-        repropagate_imuodometry(currentCorrectionTime);
+       // repropagate_imuodometry(currentCorrectionTime);
+
+        static double last_reprop_time = 0;
+        if (currentCorrectionTime - last_reprop_time > 0.1) {  // 100ms threshold
+            repropagate_imuodometry(currentCorrectionTime);
+            last_reprop_time = currentCorrectionTime;
+        }
+        
         ++key;
 
         doneFirstOpt = true;

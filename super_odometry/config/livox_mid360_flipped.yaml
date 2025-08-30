@@ -25,7 +25,7 @@
         mapping_line_resolution: 0.3
         mapping_plane_resolution: 0.6
         max_iterations: 5
-        max_surface_features: 3000
+        max_surface_features: 1000
       
 
         # For localization mode
