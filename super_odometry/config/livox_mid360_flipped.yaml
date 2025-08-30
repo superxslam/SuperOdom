@@ -25,7 +25,7 @@
         mapping_line_resolution: 0.3
         mapping_plane_resolution: 0.6
         max_iterations: 5
-        max_surface_features: 1000
+        max_surface_features: 1500
       
 
         # For localization mode
@@ -40,10 +40,10 @@
 
     # IMU Preintegration Params
     imu_preintegration_node:
-        lidar_correction_noise: 0.01
+        lidar_correction_noise: 0.005
         
         acc_n: 0.02        # accelerometer measurement noise standard deviation. #0.2
         gyr_n: 0.01        # gyroscope measurement noise standard deviation.     #0.05
-        acc_w: 0.001         # accelerometer bias random work noise standard deviation.  #0.02
-        gyr_w: 0.001       # gyroscope bias random work noise standard deviation.     #4.0e-5
+        acc_w: 0.0001      # accelerometer bias random work noise standard deviation.  #0.02
+        gyr_w: 0.0001      # gyroscope bias random work noise standard deviation.     #4.0e-5
         g_norm: 9.80511    # 0 means you need to provide both imu-camera and laser-camera extrinsic
