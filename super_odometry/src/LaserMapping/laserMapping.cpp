@@ -253,10 +253,13 @@ namespace super_odometry {
         surfLastBuf.push(msgIn->cloud_surface);
         realsenseBuf.push(msgIn->cloud_realsense);
         fullResBuf.push(msgIn->cloud_nodistortion);
-        Eigen::Quaterniond imuprediction_tmp(msgIn->initial_quaternion_w, msgIn->initial_quaternion_x,
+        Eigen::Quaterniond imu_orientation(msgIn->initial_quaternion_w, msgIn->initial_quaternion_x,
                                              msgIn->initial_quaternion_y, msgIn->initial_quaternion_z);
-
-        IMUPredictionBuf.push(imuprediction_tmp);
+        imu_orientation.normalize();
+        Eigen::Vector3d imu_position(msgIn->initial_pose_x, msgIn->initial_pose_y, msgIn->initial_pose_z);
+        Transformd imuposes(imu_orientation, imu_position);
+        
+        IMUPredictionBuf.push(imuposes);
         mBuf.unlock();
     }
 
@@ -347,7 +350,16 @@ prediction_source=determinePredictionSource();
 //Step2: Get prediction from selected source 
 switch(prediction_source){
     case PredictionSource::LIO_ODOM:{
-    T_w_lidar= T_w_lidar*sensorMeas.lioPrediction;
+    q_wodom_curr.normalize();
+    q_wodom_pre.normalize();
+    Transformd T_wodom_pre(q_wodom_pre, t_wodom_pre);
+    Transformd T_wodom_curr(q_wodom_curr, t_wodom_curr);
+    Transformd T_w_curr(q_w_curr, t_w_curr);
+    Transformd T_w_predict = T_w_curr * T_wodom_pre.inverse() * T_wodom_curr;
+    T_w_lidar=T_w_predict;
+    q_wodom_pre=q_wodom_curr;
+    t_wodom_pre=t_wodom_curr;
+    
     break;
     } 
    
@@ -394,6 +406,7 @@ if(slam.isDegenerate){
 
 }else{
     // If system is not degenerate, use IMU orientation 
+    sensorMeas.lio_prediction_status=useLIOOdometry(sensorMeas.lioPrediction);
     if(sensorMeas.lio_prediction_status){
         return PredictionSource::LIO_ODOM;
     }
@@ -579,12 +592,7 @@ return PredictionSource::CONSTANT_VELOCITY;
 
 
         slam.stats.header = odomAftMapped.header;
-        if (timeLatestImuOdometry.seconds() < 1.0)
-        {
-            timeLatestImuOdometry = pub_time;
-        }
-        rclcpp::Duration latency = timeLatestImuOdometry - pub_time;  
-        slam.stats.latency = latency.seconds() * 1000;
+        
         slam.stats.n_iterations = slam.stats.iterations.size();
         // Avoid breaking rqt_multiplot
         while (slam.stats.iterations.size() < 4)
@@ -673,7 +681,9 @@ return PredictionSource::CONSTANT_VELOCITY;
         fullResBuf.pop();
 
         //3. Extract IMU prediction 
-        data.imuPrediction=IMUPredictionBuf.front();
+      
+        data.lioPrediction=IMUPredictionBuf.front();
+        data.imuPrediction=IMUPredictionBuf.front().rot;
         data.imuPrediction.normalize();
         IMUPredictionBuf.pop();
 
@@ -728,6 +738,20 @@ return PredictionSource::CONSTANT_VELOCITY;
         }
     }
 
+    bool laserMapping::useLIOOdometry(const Transformd& lioPrediction){
+        if (lioPrediction.rot.w()!=0 && lioPrediction.pos.norm()!=0)
+        {
+            q_wodom_curr=lioPrediction.rot;
+            q_wodom_curr.normalize();
+            t_wodom_curr=lioPrediction.pos;
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     void laserMapping::updatePoseAndPublish(){
 
         //1. Update pose 
@@ -774,6 +798,7 @@ return PredictionSource::CONSTANT_VELOCITY;
             }
             try{
                 utils::ScopedTimer timer("Frame Processing");
+                rclcpp::Time processing_start = rclcpp::Clock{RCL_ROS_TIME}.now();
                 mBuf.lock(); 
                 sensorMeas=extractSensorData();
                 clearSensorData();
@@ -782,6 +807,9 @@ return PredictionSource::CONSTANT_VELOCITY;
                 adjustVoxelSize();
                 performSLAMOptimization();
                 updatePoseAndPublish();
+                rclcpp::Time processing_end = rclcpp::Clock{RCL_ROS_TIME}.now();
+                rclcpp::Duration processing_time = processing_end - processing_start;
+                slam.stats.latency = processing_time.seconds() * 1000;
                
                 //updateStatsAndDebugInfo();
 

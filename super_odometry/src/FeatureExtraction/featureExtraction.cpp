@@ -217,8 +217,7 @@ namespace super_odometry {
     }
 
 
-    
-
+#if 0
     template<typename BufferType>
     void featureExtraction::removePointDistortion(
         double lidar_start_time, 
@@ -312,7 +311,119 @@ namespace super_odometry {
         point.z = pt.z();
         }
     }
+#endif
 
+template<typename BufferType>
+void featureExtraction::removePointDistortion(
+    double lidar_start_time, 
+    double lidar_end_time,
+    MapRingBuffer<BufferType> &buffer,
+    pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &lidar_msg)
+{
+    // Step 1: Define pose extraction based on buffer type
+    auto extractPose = [](const BufferType& data) -> Transformd {
+        Transformd pose;
+        if constexpr (std::is_same_v<BufferType, Imu::Ptr>) {
+            // For IMU: only rotation, assume zero translation
+            pose.rot = data->q_w_i;
+            pose.pos = Eigen::Vector3d::Zero();
+        } else {
+            // For VIO: both rotation and translation
+            pose.rot = Eigen::Quaterniond(
+                data->pose.pose.orientation.w,
+                data->pose.pose.orientation.x,
+                data->pose.pose.orientation.y,
+                data->pose.pose.orientation.z
+            );
+            pose.pos = Eigen::Vector3d(
+                data->pose.pose.position.x,
+                data->pose.pose.position.y,
+                data->pose.pose.position.z
+            );
+        }
+        return pose;
+    };
+
+   // Step 2: Get interpolated poses directly
+   auto getInterpolatedPoseAtTime = [&buffer, &extractPose](double timestamp) -> Transformd {
+    auto after_ptr = buffer.measMap_.upper_bound(timestamp);
+    if (after_ptr->first < 0.0001) {
+        after_ptr = buffer.measMap_.begin();
+    }
+
+    if (after_ptr == buffer.measMap_.begin()) {
+        return extractPose(after_ptr->second);
+    }
+
+    auto before_ptr = std::prev(after_ptr);
+    double ratio = (timestamp - before_ptr->first) / 
+                  (after_ptr->first - before_ptr->first);
+
+    Transformd before_pose = extractPose(before_ptr->second);
+    Transformd after_pose = extractPose(after_ptr->second);
+
+    Transformd result;
+    result.rot = before_pose.rot.slerp(ratio, after_pose.rot);
+    result.pos = (1 - ratio) * before_pose.pos + ratio * after_pose.pos;
+    return result;
+    };
+    // Step 3: Get start pose
+    Transformd start_pose = getInterpolatedPoseAtTime(lidar_start_time);
+    q_w_original_l = start_pose.rot;
+    t_w_original_l = start_pose.pos;
+    
+    // Step 4: For IMU data, handle differently
+    bool is_imu_data = std::is_same_v<BufferType, Imu::Ptr>;
+    
+    if (is_imu_data) {
+        // IMU-based distortion removal: rotation only
+        Eigen::Quaterniond q_start = start_pose.rot;
+        
+        for (auto &point : lidar_msg->points) {
+            if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)) {
+                continue;
+            }
+
+            double point_time = point.time + lidar_start_time;
+            Transformd point_pose = getInterpolatedPoseAtTime(point_time);
+            
+            // Calculate relative rotation only
+            Eigen::Quaterniond q_current = point_pose.rot;
+            Eigen::Quaterniond q_relative = q_start.inverse() * q_current;
+            
+            // Apply rotation correction to point
+            Eigen::Vector3d pt(point.x, point.y, point.z);
+            pt = q_relative * pt;
+            
+            point.x = pt.x();
+            point.y = pt.y();
+            point.z = pt.z();
+        }
+    } else {
+        // VIO-based distortion removal: full pose
+        Transformd T_w_original = start_pose;
+        
+        for (auto &point : lidar_msg->points) {
+            if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)) {
+                continue;
+            }
+
+            double point_time = point.time + lidar_start_time;
+            Transformd point_pose = getInterpolatedPoseAtTime(point_time);
+            
+            // Calculate relative transformation
+            Transformd T_relative = T_w_original.inverse() * point_pose;
+            
+            // Apply transformation to point
+            Eigen::Vector3d pt(point.x, point.y, point.z);
+            pt = T_relative * pt;
+            
+            point.x = pt.x();
+            point.y = pt.y();
+            point.z = pt.z();
+        }
+    }
+}
     
 
     // Helper functions for clarity and reusability

@@ -13,7 +13,7 @@
 #include "super_odometry/config/parameter.h"
 #include "super_odometry/utils/Twist.h"
 
-#define Gravity_Norm (9.81)
+#define Gravity_Norm (9.8105)
 struct Imu {
 
 public:
@@ -129,46 +129,46 @@ public:
     //     imu_frequency = Num / total_time_span;
     // }
     
-    // Replace line 133 with this automatic detection:
-Eigen::Vector3d gravity_direction = acc_mean / acc_mean.norm();
+        // Replace line 133 with this automatic detection:
+    Eigen::Vector3d gravity_direction = acc_mean / acc_mean.norm();
 
-// Check which axis has the dominant gravity component
-double abs_x = std::abs(gravity_direction.x());
-double abs_y = std::abs(gravity_direction.y());
-double abs_z = std::abs(gravity_direction.z());
+    // Check which axis has the dominant gravity component
+    double abs_x = std::abs(gravity_direction.x());
+    double abs_y = std::abs(gravity_direction.y());
+    double abs_z = std::abs(gravity_direction.z());
 
-// Find the dominant axis
-int dominant_axis = 0;  // 0=x, 1=y, 2=z
-double max_component = abs_x;
-if (abs_y > max_component) {
-    max_component = abs_y;
-    dominant_axis = 1;
-}
-if (abs_z > max_component) {
-    max_component = abs_z;
-    dominant_axis = 2;
-}
+    // Find the dominant axis
+    int dominant_axis = 0;  // 0=x, 1=y, 2=z
+    double max_component = abs_x;
+    if (abs_y > max_component) {
+        max_component = abs_y;
+        dominant_axis = 1;
+    }
+    if (abs_z > max_component) {
+        max_component = abs_z;
+        dominant_axis = 2;
+    }
 
-// Determine gravity direction based on dominant axis
-if (dominant_axis == 2) {  // Z-axis dominant
-    // Check if Z component is positive or negative
-    if (gravity_direction.z() > 0) {
-        // Z is pointing down (flipped sensor)
-        gravity = gravity_direction * Gravity_Norm;
+    // Determine gravity direction based on dominant axis
+    if (dominant_axis == 2) {  // Z-axis dominant
+        // Check if Z component is positive or negative
+        if (gravity_direction.z() > 0) {
+            // Z is pointing down (flipped sensor)
+            gravity = gravity_direction * Gravity_Norm;
+        } else {
+            // Z is pointing up (normal sensor)
+            gravity = -gravity_direction * Gravity_Norm;
+        }
     } else {
-        // Z is pointing up (normal sensor)
+        // X or Y dominant - use the original logic
         gravity = -gravity_direction * Gravity_Norm;
     }
-} else {
-    // X or Y dominant - use the original logic
-    gravity = -gravity_direction * Gravity_Norm;
-}
 
-// Add debug output
-std::cout << "Gravity Direction Detection:" << std::endl;
-std::cout << "  Dominant axis: " << (dominant_axis == 0 ? "X" : dominant_axis == 1 ? "Y" : "Z") << std::endl;
-std::cout << "  Gravity direction: " << gravity_direction.transpose() << std::endl;
-std::cout << "  Final gravity: " << gravity.transpose() << std::endl;
+    // Add debug output
+    std::cout << "Gravity Direction Detection:" << std::endl;
+    std::cout << "  Dominant axis: " << (dominant_axis == 0 ? "X" : dominant_axis == 1 ? "Y" : "Z") << std::endl;
+    std::cout << "  Gravity direction: " << gravity_direction.transpose() << std::endl;
+    std::cout << "  Final gravity: " << gravity.transpose() << std::endl;
 
     gyr_bias = gyr_mean;
     acc_bias = acc_mean;
@@ -177,15 +177,23 @@ std::cout << "  Final gravity: " << gravity.transpose() << std::endl;
     // //Align with Gravity if the IMU is rotated at the beginning. 
     Roll_Pitch_Gravity_Matrix=calculatePitchRollMatrix(acc_mean.x(), 
     acc_mean.y(), acc_mean.z());
+    
+    bool use_gravity_aligned_extrinsics=true;
+    if(use_gravity_aligned_extrinsics){
+        imu_laser_R_Gravity=Roll_Pitch_Gravity_Matrix.inverse()*imu_laser_R;
+    }else{
+        imu_laser_R_Gravity=imu_laser_R;
+    }
 
-
+ 
     std::cout<<"imu_laser_R: "<<imu_laser_R<<std::endl;
-    imu_laser_R_Gravity=Roll_Pitch_Gravity_Matrix.inverse()*imu_laser_R;
     Transformd imu_laser_transform_gravity_(imu_laser_R_Gravity, imu_laser_T); 
     imu_laser_gravity_Transform=imu_laser_transform_gravity_;
+    
+       
+
+    
     std::cout<<"imu_laser_extrinsic_gravity: "<<imu_laser_gravity_Transform<<std::endl;    
-      
-  
     std::cout<<"IMU Data Summary"<<std::endl;
     std::cout<<"Gravity: "<<gravity.transpose()<<std::endl;
     std::cout<<"Gyroscope Bias: "<<gyr_bias.transpose()<<std::endl;

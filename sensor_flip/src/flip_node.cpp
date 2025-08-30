@@ -96,10 +96,11 @@ private:
     // Angular velocity and linear acceleration are vectors in IMU frame
     Eigen::Vector3d w(msg->angular_velocity.x, msg->angular_velocity.y, msg->angular_velocity.z);
     Eigen::Vector3d a(msg->linear_acceleration.x, msg->linear_acceleration.y, msg->linear_acceleration.z);
+    //printf("before rot accel: %f, %f, %f\n", a.x(), a.y(), a.z());
     w = R_ * w;  a = R_ * a;
     out.angular_velocity.x = w.x(); out.angular_velocity.y = w.y(); out.angular_velocity.z = w.z();
     out.linear_acceleration.x = a.x(); out.linear_acceleration.y = a.y(); out.linear_acceleration.z = a.z();
-
+    //printf("after rot accel: %f, %f, %f\n", out.linear_acceleration.x, out.linear_acceleration.y, out.linear_acceleration.z);
     auto rotCov = [&](std::array<double, 9>& P){
       Eigen::Map<Eigen::Matrix3d> M(P.data());
       if (M(0,0) >= 0.0) { M = R_ * M * R_.transpose(); }

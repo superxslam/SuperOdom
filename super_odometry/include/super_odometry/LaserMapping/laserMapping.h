@@ -151,6 +151,8 @@ namespace super_odometry {
 
         bool useIMUPrediction(const Eigen::Quaterniond& imuPrediction);
 
+        bool useLIOOdometry(const Transformd& lioPrediction);
+
         void performSLAMOptimization();
 
         void updatePoseAndPublish();
@@ -253,7 +255,7 @@ namespace super_odometry {
         std::queue<sensor_msgs::msg::PointCloud2> rawWithFeaturesBuf;
         std::queue<sensor_msgs::msg::PointCloud2::SharedPtr> rawDataBuf;
         std::queue<nav_msgs::msg::Odometry::SharedPtr> odometryBuf;
-        std::queue<Eigen::Quaterniond> IMUPredictionBuf;
+        std::queue<Transformd> IMUPredictionBuf;
         std::queue<SensorType> sensorTypeLastBuf;
         SensorType last_sensor_type_= SensorType::VELODYNE;
      

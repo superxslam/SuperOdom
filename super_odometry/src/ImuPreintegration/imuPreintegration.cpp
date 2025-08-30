@@ -369,7 +369,7 @@ namespace super_odometry {
     void imuPreintegration::process_imu_odometry(double currentCorrectionTime, gtsam::Pose3 relativePose) {
 
         // reset graph for speed
-        if (key > 30) {
+        if (key > 100) {
             reset_graph();
         }
 
@@ -398,7 +398,7 @@ namespace super_odometry {
     bool imuPreintegration::failureDetection(const gtsam::Vector3 &velCur,
                                              const gtsam::imuBias::ConstantBias &biasCur) {
         Eigen::Vector3f vel(velCur.x(), velCur.y(), velCur.z());
-        if (vel.norm() > 30) {
+        if (vel.norm() > 100) {
             RCLCPP_WARN(this->get_logger(), "Large velocity, reset IMU-preintegration!");
             return true;
         }
@@ -614,11 +614,14 @@ namespace super_odometry {
 
 void imuPreintegration::correctLivoxGravity(sensor_msgs::msg::Imu& thisImu) {
 
-        const double gravity = 9.8105;
+        const double gravity = config_.imuGravity;
         Eigen::Vector3d acc(thisImu.linear_acceleration.x,
                            thisImu.linear_acceleration.y,
                            thisImu.linear_acceleration.z);
-        acc = acc * gravity / imu_Init->acc_mean.norm();
+        double acc_mean_norm = imu_Init->acc_mean.norm();
+        if(acc_mean_norm>1e-6){
+            acc = acc * gravity / acc_mean_norm;
+        }
         thisImu.linear_acceleration.x = acc.x();
         thisImu.linear_acceleration.y = acc.y();
         thisImu.linear_acceleration.z = acc.z();

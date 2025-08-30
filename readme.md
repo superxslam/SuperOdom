@@ -179,7 +179,7 @@ Build the workspace within container
 cd ~/ros2_ws/src/livox_ros_driver2
 ./build.sh humble 
 cd ~/ros2_ws
-colcon build --symlink-install
+colcon build 
 ```
 > **Important**: make sure you first build `livox_ros_driver2` 
 
