@@ -138,12 +138,53 @@ namespace super_odometry {
         recordIterationStats(iter_stats, planner_num, edge_num, previous_T, T_w_lidar);
         //Check for convergence 
         
-        if ((summary.num_successful_steps == 1) ||(icp_iter == this->LocalizationICPMaxIter - 1)) {
-            this->LocalizationUncertainty =
-                    EstimateRegistrationError(problem, 100);
-            break;
+        // if ((summary.num_successful_steps == 1) ||(icp_iter == this->LocalizationICPMaxIter - 1)) {
+        //     this->LocalizationUncertainty =
+        //             EstimateRegistrationError(problem, 100);
+        //     break;
         
+        // }
+
+        //Modified code:
+         // Check for convergence 
+        RCLCPP_INFO(node_->get_logger(), 
+            "ICP Iteration %d: %d surf features, %d edge features", 
+            icp_iter, planner_num, edge_num);
+
+        // Improved convergence criteria
+        double pose_change = (T_w_lidar.pos - previous_T.pos).norm();
+        double rotation_change = 2 * atan2(
+            (T_w_lidar.rot * previous_T.rot.inverse()).vec().norm(),
+            (T_w_lidar.rot * previous_T.rot.inverse()).w());
+
+        RCLCPP_INFO(node_->get_logger(),
+            "Pose change: %.6f m, Rotation change: %.6f rad, Cost: %.6f -> %.6f",
+            pose_change, rotation_change, summary.initial_cost, summary.final_cost);
+
+        // Multiple stop criteria
+        bool converged = false;
+
+        // 1. Small pose change (primary convergence criterion)
+        if (pose_change < 0.001 && rotation_change < 0.001) { 
+            RCLCPP_INFO(node_->get_logger(), "Converged: Small pose change");
+            converged = true;
         }
+        // 2. Early termination for surface-only scenarios
+        else if (edge_num == 0 && planner_num > 1000 && icp_iter >= 5) {
+            RCLCPP_INFO(node_->get_logger(), 
+                "Converged: Surface-only scenario with sufficient iterations");
+            converged = true;
+        }
+
+        // Force termination on last iteration
+        if (converged || icp_iter == this->LocalizationICPMaxIter - 1) {
+            this->LocalizationUncertainty = EstimateRegistrationError(problem, 100);
+            RCLCPP_INFO(node_->get_logger(), 
+                "ICP terminated at iteration %d", static_cast<int>(icp_iter));
+            break;
+        }
+
+        //Modified Code
 
       }
       
