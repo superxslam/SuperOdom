@@ -6,6 +6,8 @@
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2/LinearMath/Matrix3x3.h>
 #include <rclcpp/rclcpp.hpp>
+#include <pcl/io/ply_io.h>
+#include <filesystem>
 
 namespace super_odometry {
 namespace utils {
@@ -206,6 +208,22 @@ void transformOusterPoints(point_os::OusterPointXYZIRT const *const pi, point_os
     po->y = point_w.y();
     po->z = point_w.z();
     po->intensity = pi->intensity;
+}
+
+bool savePly(pcl::PointCloud<PointType>::Ptr pcl_to_save, rclcpp::Node::SharedPtr node) {
+    if (pcl_to_save->size() >= 10 && pcl_to_save->size() % 10 == 0) {
+        std::string las_dir = std::string(ROOT_DIR) + "PLY";
+        std::filesystem::create_directories(las_dir);
+        std::string all_points_dir = las_dir + "/saved_scans.ply";
+        if (pcl::io::savePLYFileBinary(all_points_dir, *pcl_to_save) == 0) {
+            RCLCPP_INFO(node->get_logger(), "All scans saved to %s with %zu points", all_points_dir.c_str(), pcl_to_save->size());
+            return true;
+        } else {
+            RCLCPP_ERROR(node->get_logger(), "Failed to save scans to %s", all_points_dir.c_str());
+            return false;
+        }
+    }
+    return false;
 }
 
 

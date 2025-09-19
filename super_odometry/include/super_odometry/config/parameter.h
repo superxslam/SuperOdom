@@ -114,6 +114,8 @@ extern float IMU_ACC_Z_LIMIT;
 
 extern bool USE_IMU_ROLL_PITCH;
 
+extern bool SAVE_PLY;
+
 extern std::string SENSOR; 
 
 extern Transformd T_ouster_sensor;

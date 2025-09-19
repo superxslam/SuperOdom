@@ -4,6 +4,7 @@
     laser_topic: "/ouster/points"
     sensor: "ouster"
     use_imu_roll_pitch: false
+    save_ply: false
     
     world_frame: "map"
     world_frame_rot: "map_rot"

@@ -7,6 +7,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O4 -Wall -g")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 SET(TBB_INCLUDE_DIR "/usr/include/tbb")
 add_compile_options(-Wall -Wextra -Wpedantic -Wunused-parameter)
+add_definitions(-DROOT_DIR="${CMAKE_CURRENT_SOURCE_DIR}/")
 
 
 

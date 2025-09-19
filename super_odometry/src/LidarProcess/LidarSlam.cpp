@@ -2,7 +2,6 @@
 // LOCAL
 #include "super_odometry/LidarProcess/LidarSlam.h"
 
-
 //TODO: add to header file
 double pose_parameters[7] = {0, 0, 0, 0, 0, 0, 1};
 Eigen::Map<Eigen::Vector3d> T_w_curr(pose_parameters);
@@ -16,6 +15,7 @@ namespace super_odometry {
         PlanarsPoints.reset(new PointCloud());
         WorldEdgesPoints.reset(new PointCloud());
         WorldPlanarsPoints.reset(new PointCloud());
+        pcl_to_save.reset(new pcl::PointCloud<pcl::PointXYZI>());
     }
     void LidarSLAM::initROSInterface(rclcpp::Node::SharedPtr node) {
         node_ = node;
@@ -77,7 +77,13 @@ namespace super_odometry {
             localMap.addSurfPointCloud(*world_cloud);
          }
 
-        }
+         // Save world cloud to .ply file
+         if (SAVE_PLY) {
+            *pcl_to_save += *world_cloud;
+            utils::savePly(pcl_to_save, node_);
+         }
+
+    }
     
 
     void LidarSLAM::initializeMapping(double timeLaserOdometry){

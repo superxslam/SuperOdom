@@ -126,6 +126,12 @@ pip install rerun-sdk
 - [Docker](https://www.docker.com/)
 - [NVIDIA Docker](https://docs.nvidia.com/datacenter/cloud-native/container-toolkit/install-guide.html)
 
+### Building Docker Image
+```bash
+cd ros2_humble_docker
+docker build -t superodom-ros2:latest .
+```
+
 ### Workspace Structure
 
 First create your own local ROS2 workspace and clone `SuperOdom`: 
@@ -134,12 +140,6 @@ mkdir -p ~/ros2_ws/src
 cd ~/ros2_ws/src
 git clone https://github.com/superxslam/SuperOdom
 ```
-### Building Docker Image
-```bash
-cd SuperOdom/ros2_humble_docker
-docker build -t superodom-ros2:latest .
-```
-
 Clone respective repos and ensure they follow this exact structure under `ros2_ws/src`:
 ```
 ros2_ws/src

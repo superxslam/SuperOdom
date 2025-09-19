@@ -6,6 +6,7 @@
 
 int main(int argc, char **argv)
 {
+    pcl::console::setVerbosityLevel(pcl::console::L_ERROR);
     rclcpp::init(argc,argv);
     rclcpp::NodeOptions options;
     options.arguments({"feature_extraction_node"});
