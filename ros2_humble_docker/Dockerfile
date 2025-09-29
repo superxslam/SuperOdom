@@ -38,7 +38,12 @@ RUN export DEBIAN_FRONTEND=noninteractive \
  
 RUN apt-get update && apt-get install -y cmake libatlas-base-dev libeigen3-dev libpcl-dev libgoogle-glog-dev libsuitesparse-dev libglew-dev wget unzip git python3-pip
 RUN apt-get install -y ros-humble-tf2 ros-humble-cv-bridge ros-humble-pcl-conversions ros-humble-xacro ros-humble-robot-state-publisher \
-    ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros
+    ros-humble-rviz2 ros-humble-image-transport ros-humble-image-transport-plugins ros-humble-pcl-ros \
+    ros-humble-rqt ros-humble-rqt-common-plugins ros-humble-rqt-plot \
+    && wget -O /tmp/plotjuggler.deb https://github.com/facontidavide/PlotJuggler/releases/download/v3.8.1/PlotJuggler-3.8.1-x86_64.deb \
+    && dpkg -i /tmp/plotjuggler.deb || apt-get install -f -y \
+    && rm /tmp/plotjuggler.deb \
+    && pip3 install rerun-sdk matplotlib numpy
 
 RUN apt-get install -y libceres-dev 
 RUN apt-get install -y python3-ament-package 

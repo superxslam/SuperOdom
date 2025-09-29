@@ -1,7 +1,7 @@
 //
 // Created by shibo zhao on 2020-09-27.
 //
-#include "super_odometry/ImuPreintegration/imuPreintegration.h"
+#include "super_odometry/ImuPreintegration/imuPreintegration_current.h"
 
 
 namespace super_odometry {
@@ -236,9 +236,16 @@ namespace super_odometry {
         graphValues.insert(V(0), prevVel_);
         graphValues.insert(B(0), prevBias_);
 
-        optimizer.update(graphFactors, graphValues);
-        graphFactors.resize(0);
-        graphValues.clear();
+        try {
+            optimizer.update(graphFactors, graphValues);
+            graphFactors.resize(0);
+            graphValues.clear();
+        }
+        catch (const gtsam::IndeterminantLinearSystemException &e) {
+            RCLCPP_ERROR(this->get_logger(), "Initial system setup failed: %s", e.what());
+            resetOptimization();
+            return;
+        }
 
         imuIntegratorImu_->resetIntegrationAndSetBias(prevBias_);
         imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
@@ -313,11 +320,21 @@ namespace super_odometry {
         bool systemSolvedSuccessfully = false;
         try {
             optimizer.update(graphFactors, graphValues);
+            optimizer.update();
             systemSolvedSuccessfully = true;
         }
-        catch (const gtsam::IndeterminantLinearSystemException &) {
+        catch (const gtsam::IndeterminantLinearSystemException &e) {
             systemSolvedSuccessfully = false;
-            RCLCPP_WARN(this->get_logger(), "Update failed due to underconstrained call to isam2 in imuPreintegration");
+            RCLCPP_ERROR(this->get_logger(), "GTSAM IndeterminantLinearSystemException: %s", e.what());
+            RCLCPP_WARN(this->get_logger(), "Resetting optimization graph due to underconstrained system");
+            resetOptimization();
+            resetParams();
+            return false;
+        }
+        catch (const std::exception &e) {
+            systemSolvedSuccessfully = false;
+            RCLCPP_ERROR(this->get_logger(), "Optimization failed with exception: %s", e.what());
+            return false;
         }
 
         graphFactors.resize(0);
@@ -367,8 +384,8 @@ namespace super_odometry {
 
     void imuPreintegration::process_imu_odometry(double currentCorrectionTime, gtsam::Pose3 relativePose) {
 
-        // reset graph for speed
-        if (key > 100) {
+        // reset graph for speed and stability
+        if (key > 50) {  // Reduced threshold for more frequent resets
             reset_graph();
         }
 

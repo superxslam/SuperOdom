@@ -11,7 +11,6 @@
 #include "super_odometry/container/MapRingBuffer.h"
 #include <sensor_msgs/msg/imu.hpp>
 #include "super_odometry/config/parameter.h"
-#include "super_odometry/utils/Twist.h"
 
 #define Gravity_Norm (9.8105)
 struct Imu {
@@ -69,141 +68,89 @@ public:
   }
 
   void imuInit(MapRingBuffer<Imu::Ptr> imuBuf) {
-    
-    int Num = 0;
-    if (first_imu==false){
-        return;
-    }
-    
-    // Initialize if the buffer is not empty
-    if (!imuBuf.empty()) {
-        first_imu = false;
-        const double &time_first = imuBuf.measMap_.begin()->second->time;
-        const Eigen::Quaterniond rot_first = imuBuf.measMap_.begin()->second->q_w_i;
-        const Eigen::Vector3d gyr_first = imuBuf.measMap_.begin()->second->gyr;
-        const Eigen::Vector3d acc_first = imuBuf.measMap_.begin()->second->acc;
-        acc_mean = acc_first;
-        gyr_mean = gyr_first;
-        time = time_first;
       
-        Num = 1;
-    }
-  
-    // Variables for frequency calculation
-    double time_prev = 0;
-    double total_time_diff = 0;
-    int time_diff_count = 0;
     
-    // Iterate through the IMU buffer and update mean and covariance
-    for (std::map<double, Imu::Ptr>::iterator itMeas_ = imuBuf.measMap_.begin(); itMeas_ != imuBuf.measMap_.end(); ++itMeas_) {
-
-        const double &time_cur = itMeas_->second->time;
-        const Eigen::Quaterniond rot_cur = itMeas_->second->q_w_i;
-        const Eigen::Vector3d gyr_cur = itMeas_->second->gyr;
-        const Eigen::Vector3d acc_cur = itMeas_->second->acc;
+      int Num = 0;
+      if (first_imu==false){
+          return;
+      }
+      
+    
+      
+      // Initialize if the buffer is not empty
+      if (!imuBuf.empty()) {
+          first_imu = false;
+          const double &time_first = imuBuf.measMap_.begin()->second->time;
+          const Eigen::Quaterniond rot_first = imuBuf.measMap_.begin()->second->q_w_i;
+          const Eigen::Vector3d gyr_first = imuBuf.measMap_.begin()->second->gyr;
+          const Eigen::Vector3d acc_first = imuBuf.measMap_.begin()->second->acc;
+          acc_mean = acc_first;
+          gyr_mean = gyr_first;
+          time = time_first;
         
-        // Calculate time difference for frequency estimation
-        if (Num > 1) {
-            double time_diff = time_cur - time_prev;
-            if (time_diff > 0) {  // Ensure valid time difference
-                total_time_diff += time_diff;
-                time_diff_count++;
-            }
-        }
-        time_prev = time_cur;
-      
-        // Update means
-        acc_mean += (acc_cur - acc_mean) / Num;
-        gyr_mean += (gyr_cur - gyr_mean) / Num;
-
-        // Update covariances
-        acc_cov = acc_cov * (Num - 1.0) / Num + (acc_cur - acc_mean).cwiseProduct(acc_cur - acc_mean) / (Num - 1.0);
-        gyr_cov = gyr_cov * (Num - 1.0) / Num + (gyr_cur - gyr_mean).cwiseProduct(gyr_cur - gyr_mean) / (Num - 1.0);
-        Num++;
-    }
-  
-    // if (Num > 1 && time_diff_count > 0) {
-    //     // Get total time span
-    //     double total_time_span = imuBuf.measMap_.rbegin()->second->time - imuBuf.measMap_.begin()->second->time;
-    //     // Calculate actual number of intervals (Num-1)
-    //     imu_frequency = Num / total_time_span;
-    // }
+          Num = 1;
+      }
     
-        // Replace line 133 with this automatic detection:
-    Eigen::Vector3d gravity_direction = acc_mean / acc_mean.norm();
+      // Iterate through the IMU buffer and update mean and covariance
+      for (std::map<double, Imu::Ptr>::iterator itMeas_ = imuBuf.measMap_.begin(); itMeas_ != imuBuf.measMap_.end(); ++itMeas_) {
 
-    // Check which axis has the dominant gravity component
-    double abs_x = std::abs(gravity_direction.x());
-    double abs_y = std::abs(gravity_direction.y());
-    double abs_z = std::abs(gravity_direction.z());
+          const double &time_cur = itMeas_->second->time;
+          const Eigen::Quaterniond rot_cur = itMeas_->second->q_w_i;
+          const Eigen::Vector3d gyr_cur = itMeas_->second->gyr;
+          const Eigen::Vector3d acc_cur = itMeas_->second->acc;
+          
+        
+          // Update means
+          acc_mean += (acc_cur - acc_mean) / Num;
+          gyr_mean += (gyr_cur - gyr_mean) / Num;
 
-    // Find the dominant axis
-    int dominant_axis = 0;  // 0=x, 1=y, 2=z
-    double max_component = abs_x;
-    if (abs_y > max_component) {
-        max_component = abs_y;
-        dominant_axis = 1;
-    }
-    if (abs_z > max_component) {
-        max_component = abs_z;
-        dominant_axis = 2;
-    }
+          // Update covariances
+          acc_cov = acc_cov * (Num - 1.0) / Num + (acc_cur - acc_mean).cwiseProduct(acc_cur - acc_mean) / (Num - 1.0);
+          gyr_cov = gyr_cov * (Num - 1.0) / Num + (gyr_cur - gyr_mean).cwiseProduct(gyr_cur - gyr_mean) / (Num - 1.0);
+          Num++;
+      }
+    
 
-    // Determine gravity direction based on dominant axis
-    if (dominant_axis == 2) {  // Z-axis dominant
-        // Check if Z component is positive or negative
-        if (gravity_direction.z() > 0) {
-            // Z is pointing down (flipped sensor)
-            gravity = gravity_direction * Gravity_Norm;
-        } else {
-            // Z is pointing up (normal sensor)
-            gravity = -gravity_direction * Gravity_Norm;
-        }
+      //TODO: double check the gravity direction
+      gravity= - acc_mean / acc_mean.norm() *Gravity_Norm;
+      gyr_bias = gyr_mean;
+      acc_bias = acc_mean;
+      first_imu = false;
+
+      // //Align with Gravity if the IMU is rotated at the beginning. 
+      Roll_Pitch_Gravity_Matrix=calculatePitchRollMatrix(acc_mean.x(), 
+      acc_mean.y(), acc_mean.z());
+
+
+      imu_laser_R_Gravity=Roll_Pitch_Gravity_Matrix.inverse()*imu_laser_R;
+          
+        
+    
+      std::cout<<"IMU Data Summary"<<std::endl;
+      std::cout<<"Gravity: "<<gravity.transpose()<<std::endl;
+      std::cout<<"Gyroscope Bias: "<<gyr_bias.transpose()<<std::endl;
+      std::cout<<"Accelerometer Bias: "<<acc_bias.transpose()<<std::endl;
+      std::cout<<"Accelerometer Mean: "<<acc_mean.transpose()<<std::endl;
+      std::cout<<"pitch offset gravity: "<<pitch_offset_gravity*180/M_PI<<std::endl;
+      std::cout<<"roll offset gravity: "<<roll_offset_gravity*180/M_PI<<std::endl;
+      std::cout<<"Roll Pitch Gravity Matrix: "<<Roll_Pitch_Gravity_Matrix<<std::endl;
+      std::cout<<"Imu laser R Gravity: "<<imu_laser_R_Gravity<<std::endl;
+      saveImuLaserRGravity("/root/ros2_ws/src/subt_state_estimation/Roll_pitch_offset/imu_laser_R_Gravity.txt");
+
+      
+  }
+
+
+  void saveImuLaserRGravity(const std::string& filename) const {
+    std::ofstream file(filename);
+    if (file.is_open()) {
+      file << imu_laser_R_Gravity(0, 0) << ", " << imu_laser_R_Gravity(0, 1) << ", " << imu_laser_R_Gravity(0, 2) << ",\n"
+           << imu_laser_R_Gravity(1, 0) << ", " << imu_laser_R_Gravity(1, 1) << ", " << imu_laser_R_Gravity(1, 2) << ",\n"
+           << imu_laser_R_Gravity(2, 0) << ", " << imu_laser_R_Gravity(2, 1) << ", " << imu_laser_R_Gravity(2, 2) << ";\n";
+      file.close();
     } else {
-        // X or Y dominant - use the original logic
-        gravity = -gravity_direction * Gravity_Norm;
+      std::cerr << "Unable to open file: " << filename << std::endl;
     }
-
-    // Add debug output
-    std::cout << "Gravity Direction Detection:" << std::endl;
-    std::cout << "  Dominant axis: " << (dominant_axis == 0 ? "X" : dominant_axis == 1 ? "Y" : "Z") << std::endl;
-    std::cout << "  Gravity direction: " << gravity_direction.transpose() << std::endl;
-    std::cout << "  Final gravity: " << gravity.transpose() << std::endl;
-
-    gyr_bias = gyr_mean;
-    acc_bias = acc_mean;
-    first_imu = false;
-
-    // //Align with Gravity if the IMU is rotated at the beginning. 
-    Roll_Pitch_Gravity_Matrix=calculatePitchRollMatrix(acc_mean.x(), 
-    acc_mean.y(), acc_mean.z());
-    
-    bool use_gravity_aligned_extrinsics=true;
-    if(use_gravity_aligned_extrinsics){
-        imu_laser_R_Gravity=Roll_Pitch_Gravity_Matrix.inverse()*imu_laser_R;
-    }else{
-        imu_laser_R_Gravity=imu_laser_R;
-    }
-
- 
-    std::cout<<"imu_laser_R: "<<imu_laser_R<<std::endl;
-    Transformd imu_laser_transform_gravity_(imu_laser_R_Gravity, imu_laser_T); 
-    imu_laser_gravity_Transform=imu_laser_transform_gravity_;
-    
-       
-
-    
-    std::cout<<"imu_laser_extrinsic_gravity: "<<imu_laser_gravity_Transform<<std::endl;    
-    std::cout<<"IMU Data Summary"<<std::endl;
-    std::cout<<"Gravity: "<<gravity.transpose()<<std::endl;
-    std::cout<<"Gyroscope Bias: "<<gyr_bias.transpose()<<std::endl;
-    std::cout<<"Accelerometer Bias: "<<acc_bias.transpose()<<std::endl;
-    std::cout<<"Accelerometer Mean: "<<acc_mean.transpose()<<std::endl;
-    std::cout<<"IMU Frequency: "<<imu_frequency<<" Hz"<<std::endl;
-    std::cout<<"pitch offset gravity: "<<pitch_offset_gravity*180/M_PI<<std::endl;
-    std::cout<<"roll offset gravity: "<<roll_offset_gravity*180/M_PI<<std::endl;
-    std::cout<<"Roll Pitch Gravity Matrix: "<<Roll_Pitch_Gravity_Matrix<<std::endl;
-      
   }
 
   // Function to convert a rotation matrix to roll, pitch, and yaw
@@ -236,6 +183,7 @@ public:
   Eigen::Vector3d gravity;
   Eigen::Vector3d gyr_bias;
   Eigen::Vector3d acc_bias;
+
   Eigen::Vector3d acc_mean; // mean of accelerometer measurement (m^2/sec)
   Eigen::Vector3d gyr_mean; // mean of gyroscope measurement (rad/s)
   Eigen::Vector3d acc; // accelerometer measurement (m^2/sec)
@@ -245,7 +193,7 @@ public:
   Eigen::Quaterniond q_w_i;
   Eigen::Matrix3d Roll_Pitch_Gravity_Matrix;
   Eigen::Matrix3d imu_laser_R_Gravity;
-  Transformd imu_laser_gravity_Transform;
+
   double pitch_offset_gravity;
   double roll_offset_gravity;
 };

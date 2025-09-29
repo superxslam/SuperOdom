@@ -810,6 +810,7 @@ return PredictionSource::CONSTANT_VELOCITY;
                 rclcpp::Time processing_end = rclcpp::Clock{RCL_ROS_TIME}.now();
                 rclcpp::Duration processing_time = processing_end - processing_start;
                 slam.stats.latency = processing_time.seconds() * 1000;
+                std::cout<<"Processing time: "<<slam.stats.latency<<" ms"<<std::endl;
                
                 //updateStatsAndDebugInfo();
 

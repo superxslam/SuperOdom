@@ -667,12 +667,13 @@ void featureExtraction::removePointDistortion(
     Imu::Ptr featureExtraction::createImuData(const ImuMeasurement& measurement) {
         Imu::Ptr imudata = std::make_shared<Imu>();
         imudata->time = measurement.timestamp;
-        
+     
         // Handle Livox sensor specific processing
         if(IMU_INIT && config_.sensor == SensorType::LIVOX) {
             double gravity = imu_Init->gravity_norm;
-            Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * measurement.gyr;
-            Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * measurement.accel;
+            Eigen::Vector3d gyr =  measurement.gyr;
+            Eigen::Vector3d accel = measurement.accel;
+           
             imudata->acc = accel * gravity / imu_Init->acc_mean.norm();
             imudata->gyr = gyr;
         } else {
@@ -693,6 +694,7 @@ void featureExtraction::removePointDistortion(
             
             imudata->q_w_i = last_imu->q_w_i * delta_r;
             imudata->q_w_i.normalize();
+            //std::cout<<"IMU Orientation 111: "<<imudata->q_w_i.matrix().transpose()<<std::endl;
         } else if (config_.use_imu_roll_pitch) {
             tf2::Quaternion orientation_curr(imudata->q_w_i.x(),
                                         imudata->q_w_i.y(),
@@ -709,6 +711,7 @@ void featureExtraction::removePointDistortion(
                                             first_orientation.x(),
                                             first_orientation.y(),
                                             first_orientation.z());
+           // std::cout<<"IMU Orientation 222: "<<imudata->q_w_i.matrix().transpose()<<std::endl;
         }
     }
 
@@ -719,8 +722,9 @@ void featureExtraction::removePointDistortion(
             
             double first_time = 0.0;
             imuBuf.getFirstTime(first_time);
-            
-            if (timestamp - first_time > 1.0 && !IMU_INIT) {
+          
+            if (timestamp - first_time > 0.01 && !IMU_INIT) {
+               
                 imu_Init->imuInit(imuBuf);
                 IMU_INIT = true;
                 imuBuf.clean(timestamp);
@@ -872,7 +876,7 @@ void featureExtraction::removePointDistortion(
 
         manageLidarBuffer(pointCloud, laserCloudMsg->header.stamp.sec + laserCloudMsg->header.stamp.nanosec * 1e-9);
 
-        if(IMU_INIT==true or imuBuf.empty())
+        if(IMU_INIT==true)
         {   
             undistortionAndFeatureExtraction();
             double lidar_first_time;
@@ -923,7 +927,7 @@ void featureExtraction::removePointDistortion(
 
         manageLidarBuffer(pointCloud, msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9);
 
-        if(IMU_INIT==true or imuBuf.empty())
+        if(IMU_INIT==true)
         {   
             undistortionAndFeatureExtraction();
             double lidar_first_time;
