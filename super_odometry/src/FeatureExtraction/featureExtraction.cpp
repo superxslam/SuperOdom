@@ -191,17 +191,13 @@ namespace super_odometry {
         double meas_end_time=0;
         measureBuf.getLastTime(meas_end_time);
 
-        if (meas_end_time <= lidar_end_time) // make sure imu message arrives after lidar message
-        {
-            RCLCPP_WARN_STREAM(this->get_logger(), "meas_end_time < lidar_end_time ||"
-                            " message order is not perfect! please restart velodyne and imu driver!");
-            RCLCPP_WARN(this->get_logger(), "meas_end_time %f <  %f lidar_end_time", meas_end_time, lidar_end_time);
-            RCLCPP_WARN(this->get_logger(), "All the lidar data is more recent than all the imu data. Will throw away lidar frame");
+        const double imu_period = 1.0/imu_Init->imu_frequency;
+        
+        const double sync_tolearance =0.05;
 
-            return false;
-        }
+        const double time_difference=meas_start_time-lidar_start_time;
 
-        if (meas_start_time >= lidar_start_time)          
+        if (time_difference > sync_tolearance)          
         {
             RCLCPP_WARN(this->get_logger(), "throw laser scan, only should happen at the beginning");
             lidarBuf.clean(lidar_start_time);
@@ -671,9 +667,8 @@ void featureExtraction::removePointDistortion(
         // Handle Livox sensor specific processing
         if(IMU_INIT && config_.sensor == SensorType::LIVOX) {
             double gravity = imu_Init->gravity_norm;
-            Eigen::Vector3d gyr =  measurement.gyr;
-            Eigen::Vector3d accel = measurement.accel;
-           
+            Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * measurement.gyr;
+            Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * measurement.accel;
             imudata->acc = accel * gravity / imu_Init->acc_mean.norm();
             imudata->gyr = gyr;
         } else {
