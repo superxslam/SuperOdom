@@ -63,7 +63,7 @@ struct MapBlock
     bnewsurf_points_add_ = false;
   }
 
-  inline void insert_corner(const PointType &point)
+  inline void insert_corner(const PointType &point, float lineRes, float voxelResulation)
   {
     if (pcorner_pc_ == nullptr)
     {
@@ -74,10 +74,17 @@ struct MapBlock
       bnull_ = false;
       bcorner_null_ = false;
     }
-    pcorner_pc_->push_back(point);
+
+    int target_points=std::pow((voxelResulation/lineRes),2)*1.5;
+    
+    if(pcorner_pc_->size()<target_points)
+    {
+      pcorner_pc_->push_back(point);
+      bnewcorner_points_add_ = true;
+    }
   }
 
-  inline void insert_surf(const PointType &point)
+  inline void insert_surf(const PointType &point,float planeRes, float voxelResulation)
   {
     if (psurf_pc_ == nullptr)
     {
@@ -86,10 +93,18 @@ struct MapBlock
     if (bnull_ or bsurf_null_)
     {
       bnull_ = false;
-      bcorner_null_ = false;
+      bsurf_null_ = false;
     }
-    psurf_pc_->push_back(point);
+     
+    int target_points=std::pow((voxelResulation/planeRes),2)*1.5;
+    if (psurf_pc_->size()<target_points)
+    {
+      psurf_pc_->push_back(point);
+      bnewsurf_points_add_ = true;
+    }
+    
   }
+   
 
   inline int corner_pc_size() const
   {
@@ -143,7 +158,7 @@ public:
   Eigen::Vector3i shiftMap(const Eigen::Vector3d &t_w_cur)
   {
 
-    // 计算当前激光的位置相对于栅格地图的位置
+   
     int centerCubeI =
         int((t_w_cur.x() + halfVoxelResulation) / voxelResulation) +
         origin_.x();
@@ -486,10 +501,10 @@ public:
         [&](const tbb::blocked_range<std::vector<int>::iterator> &range) {
           for (auto &iter : range)
           {
-            if(map_[iter].in_use == false && forget_far_chunks_){
-              map_[iter].pcorner_pc_->points.clear();
-              return;
-            }
+            // if(map_[iter].in_use == false && forget_far_chunks_){
+            //   map_[iter].pcorner_pc_->points.clear();
+            //   return;
+            // }
 
             pcl::PointCloud<PointType>::Ptr tmpCorner(
                 new pcl::PointCloud<PointType>());
@@ -555,7 +570,7 @@ public:
 
         blockInd.insert(cubeInd);
 
-        map_[cubeInd].insert_surf(point);
+        map_[cubeInd].insert_surf(point,planeRes_,voxelResulation);
         map_[cubeInd].dirty = true;
       }
       
@@ -571,24 +586,34 @@ public:
                 new pcl::PointCloud<PointType>());
             pcl::VoxelGrid<PointType> downSizeFilterSurf;
 
+           
+
             double voxel_size = planeRes_;
-            if(map_[iter].in_use == false && forget_far_chunks_){
-              map_[iter].psurf_pc_->points.clear();
-              return;
+           
+            // Only process if we have new points
+            if (map_[iter].bnewsurf_points_add_ && map_[iter].psurf_pc_)
+            {
+              pcl::PointCloud<PointType>::Ptr tmpSurf(
+                  new pcl::PointCloud<PointType>());
+              pcl::VoxelGrid<PointType> downSizeFilterSurf;
+
+              downSizeFilterSurf.setLeafSize(planeRes_, planeRes_, planeRes_);
+              downSizeFilterSurf.setInputCloud(map_[iter].psurf_pc_);
+              downSizeFilterSurf.filter(*tmpSurf);
+              map_[iter].psurf_pc_ = tmpSurf;
+
+              if (map_[iter].pkdtree_surf_from_block_ == nullptr)
+                map_[iter].pkdtree_surf_from_block_.reset(
+                    new pcl::KdTreeFLANN<PointType>());
+
+              map_[iter].pkdtree_surf_from_block_->setInputCloud(
+                  map_[iter].psurf_pc_);
+              
+              map_[iter].bnewsurf_points_add_ = false;
             }
+            
+             map_[iter].dirty = false;
 
-            // RCLCPP_INFO(this->get_logger(), "voxel_size: %f", voxel_size);
-            downSizeFilterSurf.setLeafSize(voxel_size, voxel_size, voxel_size);
-            downSizeFilterSurf.setInputCloud(map_[iter].psurf_pc_);
-            downSizeFilterSurf.filter(*tmpSurf);
-            map_[iter].psurf_pc_ = tmpSurf;
-
-            if (map_[iter].pkdtree_surf_from_block_ == nullptr)
-              map_[iter].pkdtree_surf_from_block_.reset(
-                  new pcl::KdTreeFLANN<PointType>());
-
-            map_[iter].pkdtree_surf_from_block_->setInputCloud(
-                map_[iter].psurf_pc_);
           }
         };
 

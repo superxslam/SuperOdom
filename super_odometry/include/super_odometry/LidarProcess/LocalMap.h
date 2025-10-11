@@ -74,7 +74,7 @@ struct MapBlock {
         bnewsurf_points_add_ = false;
     }
 
-    inline void insertEdgePoint(const Point &point) {
+    inline void insertEdgePoint(const Point &point,float lineRes, float voxelResulation) {
         if(pedge_pc_ == nullptr) {
             pedge_pc_.reset(new pcl::PointCloud<Point>());
         }
@@ -82,18 +82,30 @@ struct MapBlock {
             bnull_ = false;
             bline_null_ = false;
         }
-        pedge_pc_->push_back(point);
+      
+        int target_points=std::pow((voxelResulation/lineRes),2)*1.5;
+        if(pedge_pc_->size()<target_points)
+        {
+            pedge_pc_->push_back(point);
+            bnewline_points_add_ = true;
+        }
     }
 
-    inline void insertSurfPoint(const Point &point) {
+    inline void insertSurfPoint(const Point &point,float planeRes, float voxelResulation) {
         if(psurf_pc_ == nullptr) {
             psurf_pc_.reset(new pcl::PointCloud<Point>());
         }
         if(bnull_ or bsurf_null_) {
             bnull_ = false;
-            bline_null_ = false;
+            bsurf_null_ = false;
         }
-        psurf_pc_->push_back(point);
+       
+        int target_points=std::pow((voxelResulation/planeRes),2)*1.5;
+        if(psurf_pc_->size()<target_points)
+        {
+            psurf_pc_->push_back(point);
+            bnewsurf_points_add_ = true;
+        }
     }
 
     inline int edgePointCloudSize() const {
@@ -299,6 +311,11 @@ public:
         int laserCloudLineFromMapNum = 0;
         int laserCloudSurfFromMapNum = 0;
 
+        
+        int null_blocks = 0;
+        int empty_blocks = 0;
+        int valid_blocks = 0;
+
         for(int i = centerCubeI - 2; i <= centerCubeI + 2; i++) {
             for(int j = centerCubeJ - 2; j <= centerCubeJ + 2; j++) {
                 for(int k = centerCubeK - 1; k <= centerCubeK + 1; k++) {
@@ -309,11 +326,29 @@ public:
                         int cubeInd = i + laserCloudWidth * j + laserCloudWidth * laserCloudHeight * k;
                         laserCloudLineFromMapNum += map_[cubeInd].edgePointCloudSize();
                         laserCloudSurfFromMapNum += map_[cubeInd].surfPointCloudSize();
+                        
+                        if (map_[cubeInd].psurf_pc_ == nullptr)
+                            null_blocks++;
+                        else if (map_[cubeInd].surfPointCloudSize() == 0)
+                            empty_blocks++;
+                        else
+                            valid_blocks++;
+                    
+                        laserCloudSurfFromMapNum+=map_[cubeInd].surfPointCloudSize();
+
                     }
                 }
             }
         }
 
+        // if (laserCloudSurfFromMapNum < 20000) {  // Log when count is suspiciously low
+        //     std::cout << "LOW COUNT DETECTED!" << std::endl;
+        //     std::cout << "Position: [" << centerCubeI << "," << centerCubeJ << "," << centerCubeK << "]" << std::endl;
+        //     std::cout << "Null blocks: " << null_blocks << std::endl;
+        //     std::cout << "Empty blocks: " << empty_blocks << std::endl;
+        //     std::cout << "Valid blocks: " << valid_blocks << std::endl;
+        //     std::cout << "Total surf points: " << laserCloudSurfFromMapNum << std::endl;
+        // }
         return std::make_tuple(laserCloudLineFromMapNum, laserCloudSurfFromMapNum);
     }  // function get_localmap_featuresize
 
@@ -546,7 +581,7 @@ public:
                cubeK < laserCloudDepth) {
                 int cubeInd = cubeI + laserCloudWidth * cubeJ + laserCloudWidth * laserCloudHeight * cubeK;
                 blockInd.insert(cubeInd);
-                map_[cubeInd].insertEdgePoint(point);
+                map_[cubeInd].insertEdgePoint(point,lineRes_,voxelResulation);
             }
         }
 
@@ -557,6 +592,7 @@ public:
 
         auto compute_func = [&](const tbb::blocked_range<std::vector<int>::iterator> &range) {
             for(auto &iter : range) {
+                
 
                 pcl::PointCloud<Point>::Ptr tmpLine(new pcl::PointCloud<Point>());
                 pcl::VoxelGrid<Point> downSizeFilterLine;
@@ -610,7 +646,7 @@ public:
 
                 blockInd.insert(cubeInd);
 
-                map_[cubeInd].insertSurfPoint(point);
+                map_[cubeInd].insertSurfPoint(point,planeRes_,voxelResulation);
             }
         }
 
@@ -620,23 +656,34 @@ public:
             for(auto &iter : range) {
                 pcl::PointCloud<Point>::Ptr tmpSurf(new pcl::PointCloud<Point>());
                 pcl::VoxelGrid<Point> downSizeFilterSurf;
+                double voxel_size = planeRes_;
 
-                downSizeFilterSurf.setLeafSize(planeRes_, planeRes_, planeRes_);
-                downSizeFilterSurf.setInputCloud(map_[iter].psurf_pc_);
-                downSizeFilterSurf.filter(*tmpSurf);
-                map_[iter].psurf_pc_ = tmpSurf;
+                if (map_[iter].bnewsurf_points_add_ && map_[iter].psurf_pc_)
+                {
+                    pcl::PointCloud<Point>::Ptr tmpSurf(
+                        new pcl::PointCloud<Point>());
+                    pcl::VoxelGrid<Point> downSizeFilterSurf;
+      
+                    downSizeFilterSurf.setLeafSize(planeRes_, planeRes_, planeRes_);
+                    downSizeFilterSurf.setInputCloud(map_[iter].psurf_pc_);
+                    downSizeFilterSurf.filter(*tmpSurf);
+                    map_[iter].psurf_pc_ = tmpSurf;
 #ifdef DONT_USE_SELF_OCTREE
-                if(map_[iter].pkdtree_surf_from_block_ == nullptr)
-                    map_[iter].pkdtree_surf_from_block_.reset(new pcl::KdTreeFLANN<Point>());
-
-                map_[iter].pkdtree_surf_from_block_->setInputCloud(map_[iter].psurf_pc_);
+                    if (map_[iter].pkdtree_surf_from_block_ == nullptr)
+                      map_[iter].pkdtree_surf_from_block_.reset(
+                          new pcl::KdTreeFLANN<Point>());
+                    map_[iter].pkdtree_surf_from_block_->setInputCloud(map_[iter].psurf_pc_);
 #else
                 if(map_[iter].pkdtree_surf_from_block_ == nullptr)
-                    map_[iter].pkdtree_surf_from_block_ =
-                            std::make_shared<nanoflann::Octree<Point, Eigen::aligned_vector<Point>>>();
+                map_[iter].pkdtree_surf_from_block_ =
+                        std::make_shared<nanoflann::Octree<Point, Eigen::aligned_vector<Point>>>();
 
                 map_[iter].pkdtree_surf_from_block_->initialize(map_[iter].psurf_pc_->points);
 #endif
+                map_[iter].bnewsurf_points_add_ = false;
+
+                }
+
             }
         };
 

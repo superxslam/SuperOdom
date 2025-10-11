@@ -69,10 +69,12 @@ namespace super_odometry {
             subLaserCloud = this->create_subscription<sensor_msgs::msg::PointCloud2>(LASER_TOPIC, laser_qos, 
                     std::bind(&featureExtraction::laserCloudHandler, this,
                     std::placeholders::_1), sub_options);
+#ifdef LIVOX_DRIVER_AVAILABLE
         } else if (config_.sensor == SensorType::LIVOX) {
             subLivoxCloud = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(LASER_TOPIC, 20, 
                     std::bind(&featureExtraction::livoxHandler, this,
                     std::placeholders::_1), sub_options);
+#endif
         } //TODO: add this to config
 
         subImu = this->create_subscription<sensor_msgs::msg::Imu>(
@@ -365,6 +367,7 @@ void featureExtraction::removePointDistortion(
     };
     // Step 3: Get start pose
     Transformd start_pose = getInterpolatedPoseAtTime(lidar_start_time);
+  
     q_w_original_l = start_pose.rot;
     t_w_original_l = start_pose.pos;
     
@@ -373,6 +376,7 @@ void featureExtraction::removePointDistortion(
     
     if (is_imu_data) {
         // IMU-based distortion removal: rotation only
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "IMU-based distortion removal");
         Eigen::Quaterniond q_start = start_pose.rot;
         
         for (auto &point : lidar_msg->points) {
@@ -397,6 +401,7 @@ void featureExtraction::removePointDistortion(
         }
     } else {
         // VIO-based distortion removal: full pose
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "VIO-based distortion removal");
         Transformd T_w_original = start_pose;
         
         for (auto &point : lidar_msg->points) {
@@ -517,6 +522,7 @@ void featureExtraction::removePointDistortion(
         laserFeature.initial_quaternion_z = q_w_original_l.z();
         laserFeature.initial_quaternion_w= q_w_original_l.w();
 
+
         laserFeature.initial_pose_x = t_w_original_l.x();
         laserFeature.initial_pose_y = t_w_original_l.y();
         laserFeature.initial_pose_z = t_w_original_l.z();
@@ -549,11 +555,6 @@ void featureExtraction::removePointDistortion(
         LASER_IMU_SYNC_SCCUESS = synchronize_measurements<Imu::Ptr>(imuBuf, lidarBuf);
         LASER_CAMERA_SYNC_SUCCESS = synchronize_measurements<nav_msgs::msg::Odometry::SharedPtr>(visualOdomBuf, lidarBuf);
 
-        if (frameCount > 100 and LASER_CAMERA_SYNC_SUCCESS == true)
-            LASER_CAMERA_SYNC_SUCCESS = true;
-        else
-            LASER_CAMERA_SYNC_SUCCESS = false;
-
         if ((LASER_IMU_SYNC_SCCUESS == true or LASER_CAMERA_SYNC_SUCCESS == true) and lidarBuf.getSize() > 0)
         {
             double lidar_start_time;
@@ -563,6 +564,7 @@ void featureExtraction::removePointDistortion(
 
             double lidar_end_time = lidar_start_time + lidar_msg->back().time;
 
+          
             if (LASER_IMU_SYNC_SCCUESS == true and LASER_CAMERA_SYNC_SUCCESS == true)
             {
                 RCLCPP_INFO(this->get_logger(), "\033[1;32m----> Both IMU ,VIO laserscan are synchronized!.\033[0m");
@@ -611,25 +613,54 @@ void featureExtraction::removePointDistortion(
     void featureExtraction::uniformFeatureExtraction(const pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &pc_in, 
         pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_out_surf, int skip_num, float block_range)
     {   
-        for (uint i=1; i <(int)pc_in->points.size(); i+=skip_num)
-        {   
-            pcl::PointXYZI point;
-            point.x=pc_in->points[i].x;
-            point.y=pc_in->points[i].y;
-            point.z=pc_in->points[i].z;
-            point.intensity=pc_in->points[i].time;
-
-            if ((abs(pc_in->points[i].x - pc_in->points[i-1].x) > 1e-7)
-                || (abs(pc_in->points[i].y - pc_in->points[i-1].y) > 1e-7)
-                || (abs(pc_in->points[i].z - pc_in->points[i-1].z) > 1e-7)
-                && (pc_in->points[i].x * pc_in->points[i].x + pc_in->points[i].y * pc_in->points[i].y + pc_in->points[i].z * pc_in->points[i].z > (block_range * block_range)))
-            {
-                pc_out_surf->push_back(point);
-            }
         
+        if(pc_in->empty()) return;
+
+        //pre-allocate output for efficiency 
+        pc_out_surf->reserve(pc_in->points.size()/skip_num);
+
+        int adaptive_skip=calculateAdaptiveSkip(pc_in, skip_num);
+        
+        const auto&points=pc_in->points;
+
+        const size_t size=points.size();
+
+        const float block_range_sq=block_range*block_range;
+
+        for (uint i=1; i <size; i+=adaptive_skip)
+        {   
+            
+            const auto& curr = points[i];
+            const auto& prev = points[i-1];
+            float dist_sq = curr.x * curr.x + curr.y * curr.y + curr.z * curr.z;  
+            // Fast coordinate difference check
+            if ((abs(curr.x - prev.x) > 1e-7) || 
+                (abs(curr.y - prev.y) > 1e-7) || 
+                (abs(curr.z - prev.z) > 1e-7) &&
+                (dist_sq > block_range_sq))
+            {
+                // Direct push without temporary variable
+                pc_out_surf->emplace_back(curr.x, curr.y, curr.z, curr.time);
+            }
         }
         
     }
+
+
+int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &pc_in, int base_skip)
+{
+    size_t point_count=pc_in->points.size();
+    if(point_count <4000)
+    {
+       return std::max(1, base_skip/2);
+    }
+    else if(pc_in->points.size()>15000)
+    {
+       return std::min(10, base_skip*2);
+    }
+}
+
+
 
     ImuMeasurement featureExtraction::parseImuMessage(const sensor_msgs::msg::Imu::SharedPtr& msg) {
         ImuMeasurement measurement;
@@ -882,7 +913,26 @@ void featureExtraction::removePointDistortion(
         m_buf.unlock();
     }
 
+    void featureExtraction::manageLidarBuffer(
+        pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr pointCloud, 
+        double timestamp)
+    {
+        // Check buffer size and drop oldest frames if necessary
+        std::size_t curLidarBufferSize = lidarBuf.getSize();
+        
+        while (curLidarBufferSize >= 50) {
+            double lidar_first_time;
+            lidarBuf.getFirstTime(lidar_first_time);
+            lidarBuf.clean(lidar_first_time);
+            RCLCPP_WARN(this->get_logger(), "Lidar buffer too large, dropping frame");
+            curLidarBufferSize = lidarBuf.getSize();
+        }
+        
+        // Add measurement to buffer
+        lidarBuf.addMeas(pointCloud, timestamp);
+    }
 
+#ifdef LIVOX_DRIVER_AVAILABLE
     void featureExtraction::livoxHandler(const livox_ros_driver2::msg::CustomMsg::UniquePtr msg)
     {   
         frameCount = frameCount + 1;
@@ -898,7 +948,8 @@ void featureExtraction::removePointDistortion(
 
         Eigen::Matrix3d rotation_matrix = Eigen::Matrix3d::Identity();
         if (!imuBuf.empty()) {
-            rotation_matrix = imu_Init->imu_laser_R_Gravity;
+           rotation_matrix = imu_Init->imu_laser_R_Gravity;
+          
         } 
         
         if(config_.provide_point_time) {     
@@ -932,24 +983,6 @@ void featureExtraction::removePointDistortion(
 
         m_buf.unlock();
     }
-
-    void featureExtraction::manageLidarBuffer(
-        pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr pointCloud, 
-        double timestamp)
-    {
-        // Check buffer size and drop oldest frames if necessary
-        std::size_t curLidarBufferSize = lidarBuf.getSize();
-        
-        while (curLidarBufferSize >= 50) {
-            double lidar_first_time;
-            lidarBuf.getFirstTime(lidar_first_time);
-            lidarBuf.clean(lidar_first_time);
-            RCLCPP_WARN(this->get_logger(), "Lidar buffer too large, dropping frame");
-            curLidarBufferSize = lidarBuf.getSize();
-        }
-        
-        // Add measurement to buffer
-        lidarBuf.addMeas(pointCloud, timestamp);
-    }
+#endif // LIVOX_DRIVER_AVAILABLE
 
 } // namespace super_odometry

@@ -1,6 +1,9 @@
 
 # Set the project directory (PROJECT_DIR) as the parent directory of the current working directory
 PROJECT_DIR=$(dirname "$PWD")
+USER_ID=$(id -u)
+GROUP_ID=$(id -g)
+
 
 # Move to the parent folder of the project directory
 cd "$PROJECT_DIR"

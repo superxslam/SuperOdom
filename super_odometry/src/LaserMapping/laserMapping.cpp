@@ -406,10 +406,10 @@ if(slam.isDegenerate){
 
 }else{
     // If system is not degenerate, use IMU orientation 
-    sensorMeas.lio_prediction_status=useLIOOdometry(sensorMeas.lioPrediction);
-    if(sensorMeas.lio_prediction_status){
-        return PredictionSource::LIO_ODOM;
-    }
+    // sensorMeas.lio_prediction_status=useLIOOdometry(sensorMeas.lioPrediction);
+    // if(sensorMeas.lio_prediction_status){
+    //     return PredictionSource::LIO_ODOM;
+    // }
     sensorMeas.imu_orientation_status=useIMUPrediction(sensorMeas.imuPrediction);
     if(sensorMeas.imu_orientation_status){
         return PredictionSource::IMU_ORIENTATION;
@@ -810,7 +810,7 @@ return PredictionSource::CONSTANT_VELOCITY;
                 rclcpp::Time processing_end = rclcpp::Clock{RCL_ROS_TIME}.now();
                 rclcpp::Duration processing_time = processing_end - processing_start;
                 slam.stats.latency = processing_time.seconds() * 1000;
-                std::cout<<"Processing time: "<<slam.stats.latency<<" ms"<<std::endl;
+                // std::cout<<"Processing time: "<<slam.stats.latency<<" ms"<<std::endl;
                
                 //updateStatsAndDebugInfo();
 

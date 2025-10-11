@@ -100,7 +100,7 @@ RUN pip install numpy==1.24.3 matplotlib==3.7.1
 RUN pip install --upgrade packaging
 RUN apt-get update && apt-get install -y ros-humble-ament-cmake
 RUN apt-get install -y tmuxp
-
+RUN sudo apt install ros-humble-foxglove-bridge
 
 WORKDIR /root/ros2_ws
 

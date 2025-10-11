@@ -47,7 +47,7 @@ public:
     lidar_qos.durability(rclcpp::DurabilityPolicy::Volatile);
     
     rclcpp::QoS imu_qos(10);
-    imu_qos.best_effort();  // Use BEST_EFFORT reliability to match imu_preintegration
+    imu_qos.reliability(rclcpp::ReliabilityPolicy::BestEffort);
     imu_qos.durability(rclcpp::DurabilityPolicy::Volatile);
     
     // Subscribe to Livox CustomMsg only (avoids type conflicts)
@@ -59,9 +59,7 @@ public:
         std::bind(&SensorFlipNode::onImu, this, std::placeholders::_1));
 
     livox_pub_ = create_publisher<livox_ros_driver2::msg::CustomMsg>(lidar_out_, lidar_qos);
-    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>(imu_out_, imu_qos);
-    
-    RCLCPP_INFO(get_logger(), "sensor_flip configured: lidar %s -> %s, imu %s -> %s, RPY(deg)=(%.1f, %.1f, %.1f)",
+    imu_pub_ = create_publisher<sensor_msgs::msg::Imu>(imu_out_, imu_qos);    RCLCPP_INFO(get_logger(), "sensor_flip configured: lidar %s -> %s, imu %s -> %s, RPY(deg)=(%.1f, %.1f, %.1f)",
                 lidar_in_.c_str(), lidar_out_.c_str(), imu_in_.c_str(), imu_out_.c_str(),
                 roll_deg, pitch_deg, yaw_deg);
   }

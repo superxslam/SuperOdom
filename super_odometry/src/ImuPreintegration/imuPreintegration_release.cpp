@@ -40,12 +40,8 @@ namespace super_odometry {
         RCLCPP_INFO(this->get_logger(), "[SuperOdometry::imuPreintegration] use_imu_rol_pitch:  %d", config_.use_imu_roll_pitch);
 
         //subscribe and publish relevant topics
-        rclcpp::QoS imu_qos(10);
-        imu_qos.best_effort();  // Use BEST_EFFORT reliability to match sensor_flip
-        imu_qos.keep_last(10);  // Keep last 10 messages
-        
         subImu = this->create_subscription<sensor_msgs::msg::Imu>(
-            IMU_TOPIC, imu_qos,
+            IMU_TOPIC, 10,
             std::bind(&imuPreintegration::imuHandler, this,
                         std::placeholders::_1), sub_options);
         subLaserOdometry = this->create_subscription<nav_msgs::msg::Odometry>(

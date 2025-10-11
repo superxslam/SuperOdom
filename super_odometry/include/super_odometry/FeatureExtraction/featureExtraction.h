@@ -31,7 +31,9 @@
 
 #include <mutex>
 
+#ifdef LIVOX_DRIVER_AVAILABLE
 #include <livox_ros_driver2/msg/custom_msg.hpp>
+#endif
 #include "super_odometry/utils/superodom_utils.h"
 
 
@@ -116,11 +118,15 @@ namespace super_odometry {
 
         void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudMsg);
 
+#ifdef LIVOX_DRIVER_AVAILABLE
         void livoxHandler(const livox_ros_driver2::msg::CustomMsg::UniquePtr msg);
+#endif
 
         void uniformFeatureExtraction(const pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &pc_in, 
             pcl::PointCloud<pcl::PointXYZI>::Ptr &pc_out_surf, int skip_num, float block_range);
-
+        
+        int calculateAdaptiveSkip(const pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &pc_in, int base_skip);
+        
         void assignTimeforPointCloud(pcl::PointCloud<PointType>::Ptr laserCloudIn_ptr_);
         
         template <typename Point>
@@ -167,6 +173,8 @@ namespace super_odometry {
 
         bool isPointValid(const point_os::PointcloudXYZITR& point);
 
+        int calculateAdaptiveSkip(pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &pc_in, int base_skip);
+
         
         Imu::Ptr imu_Init = std::make_shared<Imu>();
         MapRingBuffer<Imu::Ptr> imuBuf;
@@ -180,7 +188,9 @@ namespace super_odometry {
         rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subLaserCloud;
         rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr subImu;
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subOdom;
+#ifdef LIVOX_DRIVER_AVAILABLE
         rclcpp::Subscription<livox_ros_driver2::msg::CustomMsg>::SharedPtr subLivoxCloud;
+#endif
 
         // Publishers
         rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pubLaserCloud;

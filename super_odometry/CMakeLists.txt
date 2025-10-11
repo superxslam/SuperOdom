@@ -49,8 +49,9 @@ find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(Ceres REQUIRED)
 find_package(GTSAM REQUIRED QUIET)
+find_package(GTSAM_UNSTABLE REQUIRED QUIET)
 find_package(TBB REQUIRED)
-find_package(livox_ros_driver2 REQUIRED)
+find_package(livox_ros_driver2 QUIET)
 
 # Include directories
 include_directories(
@@ -59,11 +60,14 @@ include_directories(
   ${CERES_INCLUDE_DIRS}
   ${OpenCV_INCLUDE_DIRS}
   ${GTSAM_INCLUDE_DIR}
+  ${GTSAM_UNSTABLE_INCLUDE_DIR}
   ${TBB_INCLUDE_DIR}
   ${Sophus_INCLUDE_DIRS}
   ${pcl_conversions_INCLUDE_DIRS}
-  ${livox_ros_driver2_INCLUDE_DIRS}
 )
+if(livox_ros_driver2_FOUND)
+  include_directories(${livox_ros_driver2_INCLUDE_DIRS})
+endif()
 
 # Link directories
 link_directories(
@@ -71,9 +75,10 @@ link_directories(
   ${PCL_LIBRARY_DIRS}
   ${OpenCV_LIBRARY_DIRS}
   ${GTSAM_LIBRARY_DIRS}
+  ${GTSAM_UNSTABLE_LIBRARY_DIRS}
 )
 
-set(GTSAM_LIBRARIES gtsam)
+set(GTSAM_LIBRARIES gtsam gtsam_unstable)
 
 
 # SuperOdom Library
@@ -110,12 +115,15 @@ ament_target_dependencies(SuperOdomLib
   super_odometry_msgs
   visualization_msgs
   pcl_conversions
-  livox_ros_driver2
 )
+if(livox_ros_driver2_FOUND)
+  ament_target_dependencies(SuperOdomLib livox_ros_driver2)
+  target_compile_definitions(SuperOdomLib PRIVATE LIVOX_DRIVER_AVAILABLE)
+endif()
 target_link_libraries(SuperOdomLib
   ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  gtsam
+  ${GTSAM_LIBRARIES}
  ${CERES_LIBRARIES}
 )
 
@@ -123,7 +131,7 @@ target_link_libraries(SuperOdomLib
 add_executable(imu_preintegration_node src/imuPreintegration_node.cpp)
 ament_target_dependencies(imu_preintegration_node rclcpp nav_msgs sensor_msgs tf2_ros)
 target_link_libraries(imu_preintegration_node
-    gtsam
+    ${GTSAM_LIBRARIES}
     SuperOdomLib
 )
 
@@ -131,10 +139,11 @@ target_link_libraries(imu_preintegration_node
 
 # Feature Extraction node
 add_executable(feature_extraction_node src/featureExtraction_node.cpp)
-ament_target_dependencies(feature_extraction_node rclcpp nav_msgs sensor_msgs super_odometry_msgs livox_ros_driver2)
+ament_target_dependencies(feature_extraction_node rclcpp nav_msgs sensor_msgs super_odometry_msgs)
 target_link_libraries(feature_extraction_node 
   ${PCL_LIBRARIES}
   ${TBB_LIBRARIES}
+  ${GTSAM_LIBRARIES}
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
   SuperOdomLib
@@ -146,6 +155,7 @@ ament_target_dependencies(laser_mapping_node rclcpp std_msgs nav_msgs sensor_msg
 target_link_libraries(laser_mapping_node
     ${PCL_LIBRARIES}
     ${CERES_LIBRARIES}
+    ${GTSAM_LIBRARIES}
     SuperOdomLib
 )
 

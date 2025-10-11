@@ -1,7 +1,8 @@
 /**:
   ros__parameters:
-    imu_topic: "/livox/imu"
-    laser_topic: "/livox/lidar"
+    imu_topic: "/imu/data"
+    laser_topic: "/lidar/scan"
+    odom_topic: "/state_estimation3"
     sensor: "livox"
     use_imu_roll_pitch: false
 
@@ -18,8 +19,8 @@
     feature_extraction_node:
         scan_line: 4 
         min_range: 0.2    #<!-- remove too closed points -->
-        filter_point_size: 10
-        mapping_skip_frame: 2
+        filter_point_size: 1
+        mapping_skip_frame: 1
 
     # Laser Mapping Params
     laser_mapping_node:
