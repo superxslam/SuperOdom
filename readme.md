@@ -105,6 +105,8 @@ make -j6 && sudo make install
 
 #### Install Ceres
 ```bash
+sudo apt update 
+sudo apt install libgoogle-glob-dev
 git clone https://github.com/ceres-solver/ceres-solver.git
 cd ceres-solver
 git checkout f68321e7de8929fbcdb95dd42877531e64f72f66
