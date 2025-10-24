@@ -406,10 +406,10 @@ if(slam.isDegenerate){
 
 }else{
     // If system is not degenerate, use IMU orientation 
-    // sensorMeas.lio_prediction_status=useLIOOdometry(sensorMeas.lioPrediction);
-    // if(sensorMeas.lio_prediction_status){
-    //     return PredictionSource::LIO_ODOM;
-    // }
+    sensorMeas.lio_prediction_status=useLIOOdometry(sensorMeas.lioPrediction);
+    if(sensorMeas.lio_prediction_status){
+        return PredictionSource::LIO_ODOM;
+    }
     sensorMeas.imu_orientation_status=useIMUPrediction(sensorMeas.imuPrediction);
     if(sensorMeas.imu_orientation_status){
         return PredictionSource::IMU_ORIENTATION;
@@ -487,33 +487,33 @@ return PredictionSource::CONSTANT_VELOCITY;
                                 t_w_curr);
         }
 
-        pcl::PointCloud<pcl::PointXYZI> laserCloudFullResCvt, laserCloudFullResClean;
+        // pcl::PointCloud<pcl::PointXYZI> laserCloudFullResCvt, laserCloudFullResClean;
         sensor_msgs::msg::PointCloud2 laserCloudFullRes3;
+        // pcl::toROSMsg(*laserCloudFullRes, laserCloudFullRes3);
+        // pcl::fromROSMsg(laserCloudFullRes3, laserCloudFullResCvt);
+        // for (int i = 0; i < laserCloudFullResNum; i++) {
+        //   PointType const *const &pi = &laserCloudFullResCvt.points[i];
+        //   if (pi->x* pi->x+ pi->y * pi->y + pi->z* pi->z > 0.01)
+        //   {
+        //      laserCloudFullResClean.push_back(*pi);
+        //   }
+        // }
         pcl::toROSMsg(*laserCloudFullRes, laserCloudFullRes3);
-        pcl::fromROSMsg(laserCloudFullRes3, laserCloudFullResCvt);
-        for (int i = 0; i < laserCloudFullResNum; i++) {
-          PointType const *const &pi = &laserCloudFullResCvt.points[i];
-          if (pi->x* pi->x+ pi->y * pi->y + pi->z* pi->z > 0.01)
-          {
-             laserCloudFullResClean.push_back(*pi);
-          }
-        }
-        pcl::toROSMsg(laserCloudFullResClean, laserCloudFullRes3);
         laserCloudFullRes3.header.stamp = rclcpp::Time(timeLaserOdometry*1e9);
         laserCloudFullRes3.header.frame_id = WORLD_FRAME;
         pubLaserCloudFullRes->publish(laserCloudFullRes3);
 
-        laserCloudFullResCvt.clear();
-        laserCloudFullResClean.clear();
-        laserCloudFullRes_rot->clear();
-        laserCloudFullRes_rot->resize(laserCloudFullResNum);
+        // laserCloudFullResCvt.clear();
+        // laserCloudFullResClean.clear();
+        // laserCloudFullRes_rot->clear();
+        // laserCloudFullRes_rot->resize(laserCloudFullResNum);
 
-        for (int i = 0; i < laserCloudFullResNum; i++) {
-            laserCloudFullRes_rot->points[i].x = laserCloudFullRes->points[i].y;
-            laserCloudFullRes_rot->points[i].y = laserCloudFullRes->points[i].z;
-            laserCloudFullRes_rot->points[i].z = laserCloudFullRes->points[i].x;
-            laserCloudFullRes_rot->points[i].intensity = laserCloudFullRes->points[i].intensity;
-        }
+        // for (int i = 0; i < laserCloudFullResNum; i++) {
+        //     laserCloudFullRes_rot->points[i].x = laserCloudFullRes->points[i].y;
+        //     laserCloudFullRes_rot->points[i].y = laserCloudFullRes->points[i].z;
+        //     laserCloudFullRes_rot->points[i].z = laserCloudFullRes->points[i].x;
+        //     laserCloudFullRes_rot->points[i].intensity = laserCloudFullRes->points[i].intensity;
+        // }
 
         nav_msgs::msg::Odometry odomAftMapped;
         odomAftMapped.header.frame_id = WORLD_FRAME;

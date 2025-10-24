@@ -1,0 +1,299 @@
+{
+  "configById": {
+    "3D!2a1cy09": {
+      "cameraState": {
+        "perspective": true,
+        "distance": 147.84593541777943,
+        "phi": 4.74825873717442,
+        "thetaOffset": -3.2918714453938898,
+        "targetOffset": [
+          9.93305731730496,
+          2.464881535957124,
+          -4.0829255979736743e-16
+        ],
+        "target": [
+          0,
+          0,
+          0
+        ],
+        "targetOrientation": [
+          0,
+          0,
+          0,
+          1
+        ],
+        "fovy": 45,
+        "near": 0.5,
+        "far": 5000
+      },
+      "followMode": "follow-pose",
+      "scene": {},
+      "transforms": {},
+      "topics": {
+        "/registered_scan": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "flat",
+          "colorMap": "turbo",
+          "flatColor": "#ffffffff",
+          "stixelsEnabled": false
+        },
+        "/laser_cloud_map": {
+          "visible": true,
+          "colorField": "z",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
+        },
+        "/laser_cloud_surround": {
+          "visible": false
+        },
+        "/Laser_map": {
+          "visible": true,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
+        },
+        "/cloud_registered_body": {
+          "visible": true,
+          "colorField": "_auto_distance",
+          "colorMode": "flat",
+          "colorMap": "turbo",
+          "pointSize": 4.3,
+          "flatColor": "#fdfdfdff"
+        },
+        "/cloud_effected": {
+          "visible": false
+        },
+        "/cloud_registered": {
+          "visible": false,
+          "colorField": "intensity",
+          "colorMode": "colormap",
+          "colorMap": "turbo"
+        },
+        "/laser_odom_path": {
+          "visible": false,
+          "lineWidth": 0.2701,
+          "type": "line",
+          "arrowScale": [
+            1,
+            -0.194,
+            0.15
+          ]
+        }
+      },
+      "layers": {
+        "grid": {
+          "visible": true,
+          "drawBehind": false,
+          "frameLocked": true,
+          "label": "Grid",
+          "instanceId": "53ed09c4-9ded-4fe2-ab8b-e6b4f83b3a34",
+          "layerId": "foxglove.Grid",
+          "size": 10,
+          "divisions": 10,
+          "lineWidth": 1,
+          "color": "#248eff",
+          "position": [
+            0,
+            0,
+            0
+          ],
+          "rotation": [
+            0,
+            0,
+            0
+          ]
+        }
+      },
+      "publish": {
+        "type": "point",
+        "poseTopic": "/move_base_simple/goal",
+        "pointTopic": "/clicked_point",
+        "poseEstimateTopic": "/initialpose",
+        "poseEstimateXDeviation": 0.5,
+        "poseEstimateYDeviation": 0.5,
+        "poseEstimateThetaDeviation": 0.26179939
+      },
+      "imageMode": {}
+    },
+    "Plot!4kkek24": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.latency",
+          "enabled": true,
+          "color": "#4e98e2",
+          "label": "Latency (ms)"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Latency Analysis",
+      "xAxisLabel": "timestmap",
+      "yAxisLabel": "latency"
+    },
+    "Plot!30jk0ft": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.laser_cloud_corner_from_map_num",
+          "enabled": true,
+          "color": "#4e98e2"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.laser_cloud_corner_stack_num",
+          "enabled": true,
+          "color": "#f5774d"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.laser_cloud_surf_from_map_num",
+          "enabled": true,
+          "color": "#f7df71"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.laser_cloud_surf_stack_num",
+          "enabled": true,
+          "color": "#5cd6a9"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "xAxisLabel": "Time",
+      "yAxisLabel": "Feature Number"
+    },
+    "Plot!44wvxwx": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.uncertainty_x",
+          "enabled": true,
+          "color": "#e34f5a"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.uncertainty_y",
+          "enabled": true,
+          "color": "#4cf59b"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.uncertainty_z",
+          "enabled": true,
+          "color": "#31b4d6"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "foxglovePanelTitle": "Uncertainty Analysis"
+    },
+    "Plot!36gl5dr": {
+      "paths": [
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.iterations[0].translation_norm",
+          "enabled": true,
+          "color": "#4e98e2",
+          "xValuePath": "/super_odometry_stats.header.stamp"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.iterations[1].translation_norm",
+          "enabled": true,
+          "color": "#f7df71"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.iterations[2].translation_norm",
+          "enabled": true,
+          "color": "#f5774d"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.iterations[3].translation_norm",
+          "enabled": true,
+          "color": "#5cd6a9"
+        },
+        {
+          "timestampMethod": "receiveTime",
+          "value": "/super_odometry_stats.translation_from_last",
+          "enabled": true,
+          "color": "#ff6161"
+        }
+      ],
+      "showXAxisLabels": true,
+      "showYAxisLabels": true,
+      "showLegend": true,
+      "legendDisplay": "floating",
+      "showPlotValuesInLegend": false,
+      "isSynced": true,
+      "xAxisVal": "timestamp",
+      "sidebarDimension": 240,
+      "yAxisLabel": "Initial Guess",
+      "timeRange": "latest",
+      "xAxisPath": {
+        "value": "/super_odometry_stats.header.stamp"
+      },
+      "foxglovePanelTitle": "Initial Guess Analysis"
+    },
+    "RawMessages!2gzc4io": {
+      "diffEnabled": false,
+      "diffMethod": "custom",
+      "diffTopicPath": "",
+      "showFullMessageForDiff": false,
+      "topicPath": "/prediction_source",
+      "fontSize": 16
+    }
+  },
+  "globalVariables": {},
+  "userNodes": {},
+  "playbackConfig": {
+    "speed": 1
+  },
+  "layout": {
+    "first": {
+      "first": "3D!2a1cy09",
+      "second": {
+        "first": "Plot!4kkek24",
+        "second": "Plot!30jk0ft",
+        "direction": "row",
+        "splitPercentage": 42.660550458715576
+      },
+      "direction": "row",
+      "splitPercentage": 38.25545171339564
+    },
+    "second": {
+      "first": {
+        "first": "Plot!44wvxwx",
+        "second": "Plot!36gl5dr",
+        "direction": "row",
+        "splitPercentage": 49.649673533294255
+      },
+      "second": "RawMessages!2gzc4io",
+      "direction": "row",
+      "splitPercentage": 91.15362286788489
+    },
+    "direction": "column",
+    "splitPercentage": 59.177008491182235
+  }
+}

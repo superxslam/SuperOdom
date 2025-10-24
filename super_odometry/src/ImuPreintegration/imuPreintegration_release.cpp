@@ -92,7 +92,7 @@ namespace super_odometry {
                 (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished());         // rad,rad,rad,m, m, m
         priorVelNoise = gtsam::noiseModel::Isotropic::Sigma(3, 1e-2);                      // m/s
         priorBiasNoise = gtsam::noiseModel::Isotropic::Sigma(6,
-                                                             1e-1);                    // 1e-2 ~ 1e-3 seems to be good
+                                                             1e-2);                    // 1e-2 ~ 1e-3 seems to be good
         correctionNoise = gtsam::noiseModel::Isotropic::Sigma(6, config_.lidar_correction_noise); // meter
        // correctionNoise = gtsam::noiseModel::Diagonal::Sigmas((gtsam::Vector(6) << 0.05, 0.05, 0.05, 0.1, 0.1, 0.1).finished()); // rad,rad,rad,m, m, m
 
@@ -740,7 +740,7 @@ namespace super_odometry {
                 // odometry.twist.twist.linear.x = velocity_curr.x();
                 // odometry.twist.twist.linear.y = velocity_curr.y();
                 // odometry.twist.twist.linear.z = velocity_curr.z();
-                // odometry.pose.covariance[0] = double(RESULT);
+                 // odometry.pose.covariance[0] = double(RESULT);
                 // pubImuOdometrySmooth->publish(odometry);
 
                 std_msgs::msg::Bool health_status_msg;
@@ -777,7 +777,7 @@ namespace super_odometry {
         Eigen::Vector3d rpy;
         rpy=imu_Init->rotationMatrixToRPY(imu_laser_R_Gravity);
  
-
+        imu_laser_R_Gravity=Eigen::Matrix3d::Identity();  
         // rotate gyroscope
         Eigen::Vector3d gyr(imu_in.angular_velocity.x, imu_in.angular_velocity.y,
                             imu_in.angular_velocity.z);

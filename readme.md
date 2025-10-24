@@ -176,6 +176,9 @@ sudo chmod -R 777 container_run.sh
 
 Build the workspace within container
 ```bash
+pip install empy==3.3.4
+sudo apt-get install -y python3-ament-package python-tk python3-pip
+sudo apt-get -y install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
 cd ~/ros2_ws/src/livox_ros_driver2
 ./build.sh humble 
 cd ~/ros2_ws

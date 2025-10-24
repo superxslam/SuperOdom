@@ -77,7 +77,7 @@ namespace super_odometry {
         priorPoseNoise = gtsam::noiseModel::Diagonal::Sigmas(
                 (gtsam::Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished());
         priorVelNoise = gtsam::noiseModel::Isotropic::Sigma(3, 1e-2);
-        priorBiasNoise = gtsam::noiseModel::Isotropic::Sigma(6, 1e-1);
+        priorBiasNoise = gtsam::noiseModel::Isotropic::Sigma(6, 1e-2);
 
         correctionNoise = gtsam::noiseModel::Diagonal::Sigmas(
                 (gtsam::Vector(6) << config_.lidar_correction_noise, config_.lidar_correction_noise,
@@ -183,7 +183,7 @@ namespace super_odometry {
         this->declare_parameter<double>("imu_preintegration_node.imu_acc_z_limit", 1.0);
 
         // Fixed-lag smoother parameters
-        this->declare_parameter<bool>("imu_preintegration_node.use_fixed_lag", true);
+        this->declare_parameter<bool>("imu_preintegration_node.use_fixed_lag", false);
         this->declare_parameter<double>("imu_preintegration_node.fixed_lag_size", 10.0);
         this->declare_parameter<bool>("imu_preintegration_node.use_batch_fixed_lag", false);
 
@@ -233,7 +233,14 @@ namespace super_odometry {
         systemInitialized = false;
     }
 
-    void imuPreintegration::initial_system(double currentCorrectionTime, gtsam::Pose3 lidarPose) {
+    void imuPreintegration::initial_system(double currentCorrectionTime, gtsam::Pose3 lidarPose) {\
+
+        // Guard against double-initialization
+        if (systemInitialized) {
+        RCLCPP_WARN(this->get_logger(), "System already initialized; skipping re-initialization.");
+        return;
+        }
+        
         while (!imuQueOpt.empty()) {
             if (secs(&imuQueOpt.front()) < currentCorrectionTime - delta_t) {
                 lastImuT_opt = secs(&imuQueOpt.front());
@@ -247,7 +254,8 @@ namespace super_odometry {
         lastLidarPose = lidarPose;
 
         // Graph starts at identity
-        prevPose_ = gtsam::Pose3();
+        prevPose_ = lidarPose.compose(lidar2Imu);
+
         prevVel_ = gtsam::Vector3(0, 0, 0);
         prevBias_ = gtsam::imuBias::ConstantBias();
         prevState_ = gtsam::NavState(prevPose_, prevVel_);
@@ -427,18 +435,24 @@ namespace super_odometry {
                 result = incrementalSmoother_->calculateEstimate();
             }
 
-            prevPose_ = result.at<gtsam::Pose3>(X(key));
-            prevVel_ = result.at<gtsam::Vector3>(V(key));
-            prevState_ = gtsam::NavState(prevPose_, prevVel_);
-            prevBias_ = result.at<gtsam::imuBias::ConstantBias>(B(key));
-            imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
+            // Guard against missing keys (e.g., if marginalized or update failed partially)
+            if (result.exists(X(key)) && result.exists(V(key)) && result.exists(B(key))) {
+                prevPose_ = result.at<gtsam::Pose3>(X(key));
+                prevVel_ = result.at<gtsam::Vector3>(V(key));
+                prevState_ = gtsam::NavState(prevPose_, prevVel_);
+                prevBias_ = result.at<gtsam::imuBias::ConstantBias>(B(key));
+                imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
 
-            worldPose = lidarPose.compose(lidar2Imu);
-            lastLidarPose = lidarPose;
+                worldPose = lidarPose.compose(lidar2Imu);
+                lastLidarPose = lidarPose;
 
-            // Always update pose history here in fixed-lag mode
-            TimestampedPose tsPose(curLaserodomtimestamp, worldPose, prevPose_, key);
-            poseHistory[curLaserodomtimestamp] = tsPose;
+                // Always update pose history here in fixed-lag mode
+                TimestampedPose tsPose(curLaserodomtimestamp, worldPose, prevPose_, key);
+                poseHistory[curLaserodomtimestamp] = tsPose;
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Missing keys at current step (key=%d) in fixed-lag estimate; skipping state update.", key);
+                return false;
+            }
         }
 
         logPerformanceTiming(start_time, opt_time_ms, curLaserodomtimestamp);
@@ -504,14 +518,20 @@ namespace super_odometry {
         if (systemSolvedSuccessfully) {
             gtsam::Values result = optimizer.calculateEstimate();
 
-            prevPose_ = result.at<gtsam::Pose3>(X(key));
-            prevVel_ = result.at<gtsam::Vector3>(V(key));
-            prevState_ = gtsam::NavState(prevPose_, prevVel_);
-            prevBias_ = result.at<gtsam::imuBias::ConstantBias>(B(key));
-            imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
+            // Guard against missing keys in estimate
+            if (result.exists(X(key)) && result.exists(V(key)) && result.exists(B(key))) {
+                prevPose_ = result.at<gtsam::Pose3>(X(key));
+                prevVel_ = result.at<gtsam::Vector3>(V(key));
+                prevState_ = gtsam::NavState(prevPose_, prevVel_);
+                prevBias_ = result.at<gtsam::imuBias::ConstantBias>(B(key));
+                imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
 
-            worldPose = lidarPose.compose(lidar2Imu);
-            lastLidarPose = lidarPose;
+                worldPose = lidarPose.compose(lidar2Imu);
+                lastLidarPose = lidarPose;
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Missing keys at current step (key=%d) in ISAM2 estimate; skipping state update.", key);
+                return false;
+            }
         }
 
         logPerformanceTiming(start_time, opt_time_ms, curLaserodomtimestamp);
@@ -655,10 +675,13 @@ namespace super_odometry {
         // Store pose history for proper tracking
         if (key > 0 && doneFirstOpt) {
             gtsam::Values currentEstimate = optimizer.calculateEstimate();
-            gtsam::Pose3 localPose = currentEstimate.at<gtsam::Pose3>(X(key - 1));
-
-            TimestampedPose tsPose(currentCorrectionTime, worldPose, localPose, key - 1);
-            poseHistory[currentCorrectionTime] = tsPose;
+            if (currentEstimate.exists(X(key - 1))) {
+                gtsam::Pose3 localPose = currentEstimate.at<gtsam::Pose3>(X(key - 1));
+                TimestampedPose tsPose(currentCorrectionTime, worldPose, localPose, key - 1);
+                poseHistory[currentCorrectionTime] = tsPose;
+            } else {
+                RCLCPP_WARN(this->get_logger(), "Key X(%d) not found during marginalization bookkeeping; skipping pose history add.", key - 1);
+            }
         }
 
         // Check if we need to perform smart reset
@@ -697,10 +720,18 @@ namespace super_odometry {
 
         gtsam::Values currentEstimate = optimizer.calculateEstimate();
 
+        if (!(currentEstimate.exists(X(keepFromKey)) && currentEstimate.exists(V(keepFromKey)) && currentEstimate.exists(B(keepFromKey)))) {
+            RCLCPP_WARN(this->get_logger(), "Missing reset keys at keepFromKey=%d; aborting smart reset.", keepFromKey);
+            return;
+        }
+        if (!currentEstimate.exists(X(key - 1))) {
+            RCLCPP_WARN(this->get_logger(), "Missing current pose key X(%d) during smart reset; aborting.", key - 1);
+            return;
+        }
+
         gtsam::Pose3 resetPose = currentEstimate.at<gtsam::Pose3>(X(keepFromKey));
         gtsam::Vector3 resetVel = currentEstimate.at<gtsam::Vector3>(V(keepFromKey));
-        gtsam::imuBias::ConstantBias resetBias = 
-            currentEstimate.at<gtsam::imuBias::ConstantBias>(B(keepFromKey));
+        gtsam::imuBias::ConstantBias resetBias = currentEstimate.at<gtsam::imuBias::ConstantBias>(B(keepFromKey));
 
         gtsam::Pose3 currentLocalPose = currentEstimate.at<gtsam::Pose3>(X(key - 1));
         gtsam::Pose3 relativeFromReset = resetPose.inverse().compose(currentLocalPose);
@@ -1090,6 +1121,7 @@ namespace super_odometry {
 
     void imuPreintegration::laserodometryHandler(const nav_msgs::msg::Odometry::SharedPtr odomMsg) {
         std::lock_guard<std::mutex> lock(mBuf);
+        try {
 
         cur_frame = odomMsg;
         double lidarOdomTime = secs(odomMsg);
@@ -1118,7 +1150,20 @@ namespace super_odometry {
         process_imu_odometry(lidarOdomTime, lidarPose);
 
         // 2. safe landing process
-        double latest_imu_time = secs(&imuQueImu.back());
+        double latest_imu_time = -1.0;
+        if (!imuQueImu.empty()) {
+            latest_imu_time = secs(&imuQueImu.back());
+        } else {
+            RCLCPP_WARN(this->get_logger(), "IMU queue empty when checking health; marking FAIL.");
+            health_status = false;
+            RESULT = IMU_STATE::FAIL;
+            std_msgs::msg::Bool health_status_msg;
+            health_status_msg.data = health_status;
+            pubHealthStatus->publish(health_status_msg);
+            last_frame = cur_frame;
+            last_processed_lidar_time = lidarOdomTime;
+            return;
+        }
 
         if (lidarOdomTime - latest_imu_time < imu_laser_timedelay) {
             RESULT = IMU_STATE::SUCCESS;
@@ -1140,6 +1185,11 @@ namespace super_odometry {
 
         last_frame = cur_frame;
         last_processed_lidar_time = lidarOdomTime;
+        } catch (const std::out_of_range& e) {
+            RCLCPP_ERROR(this->get_logger(), "laserodometryHandler out_of_range: %s", e.what());
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "laserodometryHandler exception: %s", e.what());
+        }
     }
     //TODO: need to consider the extrinsic matrix of imu and lidar
     sensor_msgs::msg::Imu imuPreintegration::imuConverter(const sensor_msgs::msg::Imu &imu_in) {
@@ -1147,6 +1197,8 @@ namespace super_odometry {
 
         Eigen::Matrix3d imu_laser_R_Gravity;
         imu_laser_R_Gravity = imu_Init->imu_laser_R_Gravity;
+
+        //imu_laser_R_Gravity = imu_laser_R;
 
         // Rotate gyroscope
         Eigen::Vector3d gyr(imu_in.angular_velocity.x, imu_in.angular_velocity.y,
@@ -1166,6 +1218,8 @@ namespace super_odometry {
         imu_out.linear_acceleration.x = acc.x();
         imu_out.linear_acceleration.y = acc.y();
         imu_out.linear_acceleration.z = acc.z();
+
+        
 
 
         // rotate roll pitch yaw
@@ -1197,45 +1251,51 @@ namespace super_odometry {
 
    void imuPreintegration::imuHandler(const sensor_msgs::msg::Imu::SharedPtr imu_raw) {
     std::lock_guard<std::mutex> lock(mBuf);
+    try {
+        // 1. Pre-process IMU data
+        sensor_msgs::msg::Imu thisImu = imuConverter(*imu_raw);
 
-    // 1. Pre-process IMU data
-    sensor_msgs::msg::Imu thisImu = imuConverter(*imu_raw);
-    assert(imu_raw->linear_acceleration.x != thisImu.linear_acceleration.x);
+        // 2. Handle IMU initialization for LIVOX sensor
+        if (!handleIMUInitialization(imu_raw, thisImu)) {
+            return;
+        }
+        
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1, "\033[34m After IMU Init Success: %.3f, %.3f, %.3f\033[0m", 
+        thisImu.linear_acceleration.x, thisImu.linear_acceleration.y, thisImu.linear_acceleration.z);
+        // 3. Process timing and queue management
+        processTiming(thisImu);
 
-    // 2. Handle IMU initialization for LIVOX sensor
-    if (!handleIMUInitialization(imu_raw, thisImu)) {
-        return;
-    }
-
-    // 3. Process timing and queue management
-    processTiming(thisImu);
-
-    // 4. Early return if first optimization not done
-    if (!doneFirstOpt) {
-        return;
-    }
-
-        // Predict current state in local frame
-        gtsam::NavState currentStateLocal = imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);
-
-        // Transform to world frame for output
-        gtsam::Pose3 relativePose = prevStateOdom.pose().inverse().compose(currentStateLocal.pose());
-        gtsam::Pose3 currentWorldPose = worldPose.compose(relativePose);
-
-        // Create odometry message
-        nav_msgs::msg::Odometry odometry;
-        prepareOdometryMessage(odometry, thisImu, currentStateLocal, currentWorldPose);
-
-        if (frame_count++ % 4 == 0) {
-            pubImuOdometry->publish(odometry);
+        // 4. Early return if first optimization not done
+        if (!doneFirstOpt) {
+            return;
         }
 
-        publishTransformsAndPath(odometry, thisImu);
+            // Predict current state in local frame
+            gtsam::NavState currentStateLocal = imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);
 
-        // Publish health status
-        std_msgs::msg::Bool health_status_msg;
-        health_status_msg.data = health_status;
-        pubHealthStatus->publish(health_status_msg);
+            // Transform to world frame for output
+            gtsam::Pose3 relativePose = prevStateOdom.pose().inverse().compose(currentStateLocal.pose());
+            gtsam::Pose3 currentWorldPose = worldPose.compose(relativePose);
+
+            // Create odometry message
+            nav_msgs::msg::Odometry odometry;
+            prepareOdometryMessage(odometry, thisImu, currentStateLocal, currentWorldPose);
+
+            if (frame_count++ % 4 == 0) {
+                pubImuOdometry->publish(odometry);
+            }
+
+            publishTransformsAndPath(odometry, thisImu);
+
+            // Publish health status
+            std_msgs::msg::Bool health_status_msg;
+            health_status_msg.data = health_status;
+            pubHealthStatus->publish(health_status_msg);
+        } catch (const std::out_of_range& e) {
+            RCLCPP_ERROR(this->get_logger(), "imuHandler out_of_range: %s", e.what());
+        } catch (const std::exception& e) {
+            RCLCPP_ERROR(this->get_logger(), "imuHandler exception: %s", e.what());
+        }
     }
 
     bool imuPreintegration::handleIMUInitialization(const sensor_msgs::msg::Imu::SharedPtr&imu_raw, 
@@ -1247,7 +1307,7 @@ namespace super_odometry {
         if (config_.sensor == SensorType::LIVOX) {
             correctLivoxGravity(thisImu);
         }
-
+        
         return imu_init_success; 
     }
 
@@ -1279,7 +1339,7 @@ namespace super_odometry {
     }
 
     void imuPreintegration::correctLivoxGravity(sensor_msgs::msg::Imu& thisImu) {
-        const double gravity = 9.8105;
+        const double gravity = config_.imuGravity;
         Eigen::Vector3d acc(thisImu.linear_acceleration.x,
                            thisImu.linear_acceleration.y,
                            thisImu.linear_acceleration.z);
@@ -1386,7 +1446,7 @@ namespace super_odometry {
         odometry.header.frame_id = WORLD_FRAME;
         odometry.child_frame_id = SENSOR_FRAME;
 
-        q_w_curr.normalized();
+        q_w_curr.normalize();
 
         odometry.pose.pose.position.x = lidarPoseWorld.translation().x();
         odometry.pose.pose.position.y = lidarPoseWorld.translation().y();
@@ -1411,7 +1471,21 @@ namespace super_odometry {
         odometry.pose.covariance[5] = prevBiasOdom.gyroscope().y();
         odometry.pose.covariance[6] = prevBiasOdom.gyroscope().z();
         odometry.pose.covariance[7] = config_.imuGravity;
-    }
+
+         // For static: g_w_est = -R_wb * f_b should be ~ [0,0,-g]
+       // For static: g_w_est should be ~ [0, 0, -g]
+        Eigen::Matrix3d R_wb = currentWorldPose.rotation().matrix();  // world <- IMU body
+        Eigen::Vector3d f_b(thisImu.linear_acceleration.x,
+                            thisImu.linear_acceleration.y,
+                            thisImu.linear_acceleration.z);
+        // optional: bias-compensate the measurement
+        Eigen::Vector3d f_b_ub = f_b - Eigen::Vector3d(prevBiasOdom.accelerometer().x(),
+                                                        prevBiasOdom.accelerometer().y(),
+                                                        prevBiasOdom.accelerometer().z());
+        Eigen::Vector3d g_w_est = -R_wb * f_b_ub;
+        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
+            "g_w_est = [%.3f, %.3f, %.3f], |g|=%.3f", g_w_est.x(), g_w_est.y(), g_w_est.z(), g_w_est.norm());
+            }
 
 
 } // end namespace super_odometry

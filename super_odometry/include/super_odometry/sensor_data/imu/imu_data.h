@@ -12,7 +12,6 @@
 #include <sensor_msgs/msg/imu.hpp>
 #include "super_odometry/config/parameter.h"
 
-#define Gravity_Norm (9.8105)
 struct Imu {
 
 public:
@@ -112,7 +111,7 @@ public:
     
 
       //TODO: double check the gravity direction
-      gravity= - acc_mean / acc_mean.norm() *Gravity_Norm;
+      gravity=  acc_mean / acc_mean.norm() *gravity_norm;
       gyr_bias = gyr_mean;
       acc_bias = acc_mean;
       first_imu = false;
@@ -135,7 +134,7 @@ public:
       std::cout<<"roll offset gravity: "<<roll_offset_gravity*180/M_PI<<std::endl;
       std::cout<<"Roll Pitch Gravity Matrix: "<<Roll_Pitch_Gravity_Matrix<<std::endl;
       std::cout<<"Imu laser R Gravity: "<<imu_laser_R_Gravity<<std::endl;
-      saveImuLaserRGravity("/root/ros2_ws/src/subt_state_estimation/Roll_pitch_offset/imu_laser_R_Gravity.txt");
+      saveImuLaserRGravity("imu_laser_R_Gravity.txt");
 
       
   }
@@ -176,9 +175,9 @@ public:
 }
 
   EIGEN_MAKE_ALIGNED_OPERATOR_NEW
-  double gravity_norm = 9.8105;
   bool first_imu = true;
   double time;
+  double gravity_norm = 9.8105;
   double imu_frequency = 200.0; // default 200 Hz
   Eigen::Vector3d gravity;
   Eigen::Vector3d gyr_bias;

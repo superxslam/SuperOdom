@@ -59,6 +59,7 @@ namespace super_odometry {
         double imu_acc_x_limit;
         double imu_acc_y_limit;
         double imu_acc_z_limit;
+        double predict_future_secs; // forward prediction horizon for minimal publish delay
     };
 
     class imuPreintegration : public rclcpp::Node {
@@ -148,6 +149,7 @@ namespace super_odometry {
         gtsam::noiseModel::Diagonal::shared_ptr priorVelNoise;
         gtsam::noiseModel::Diagonal::shared_ptr priorBiasNoise;
         gtsam::noiseModel::Diagonal::shared_ptr correctionNoise;
+        std::shared_ptr<gtsam::PreintegrationParams> preint_params_;
         gtsam::Vector noiseModelBetweenBias;
         std::shared_ptr<gtsam::PreintegratedImuMeasurements> imuIntegratorOpt_;
         std::shared_ptr<gtsam::PreintegratedImuMeasurements> imuIntegratorImu_;
@@ -171,6 +173,10 @@ namespace super_odometry {
         gtsam::Pose3 imu2Lidar;
         gtsam::Pose3 lidar2Imu;
 
+        // Fixed alignment from LiDAR map frame 'm' to gravity-aligned world 'w'
+        Eigen::Matrix3d R_wm_ = Eigen::Matrix3d::Identity();
+        bool world_align_ready_ = false;
+
     public:
         MapRingBuffer<Imu::Ptr> imuBuf;
         std::deque<sensor_msgs::msg::Imu> imuQueOpt;
@@ -184,6 +190,7 @@ namespace super_odometry {
         bool doneFirstOpt = false;
         bool health_status = true;
         bool imu_init_success = false;
+        bool gravity_in_map_set_ = false;
 
        
         Eigen::Quaterniond firstImu;
