@@ -81,6 +81,7 @@ public:
           first_imu = false;
           const double &time_first = imuBuf.measMap_.begin()->second->time;
           const Eigen::Quaterniond rot_first = imuBuf.measMap_.begin()->second->q_w_i;
+          (void)rot_first;
           const Eigen::Vector3d gyr_first = imuBuf.measMap_.begin()->second->gyr;
           const Eigen::Vector3d acc_first = imuBuf.measMap_.begin()->second->acc;
           acc_mean = acc_first;
@@ -97,6 +98,8 @@ public:
           const Eigen::Quaterniond rot_cur = itMeas_->second->q_w_i;
           const Eigen::Vector3d gyr_cur = itMeas_->second->gyr;
           const Eigen::Vector3d acc_cur = itMeas_->second->acc;
+          (void)time_cur;
+          (void)rot_cur;
           
         
           // Update means

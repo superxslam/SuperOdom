@@ -40,6 +40,7 @@ find_package(cv_bridge REQUIRED)
 find_package(tf2 REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(super_odometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
@@ -159,6 +160,11 @@ target_link_libraries(laser_mapping_node
     SuperOdomLib
 )
 
+# Tools: frame_normalizer_node
+add_executable(frame_normalizer_node src/frame_normalizer_node.cpp)
+ament_target_dependencies(frame_normalizer_node rclcpp nav_msgs sensor_msgs tf2_ros tf2_eigen)
+target_link_libraries(frame_normalizer_node Eigen3::Eigen ${PCL_LIBRARIES})
+
 # Install Exported Libraries
 ament_export_targets(export_super_odometry HAS_LIBRARY_TARGET)
 
@@ -184,6 +190,7 @@ install(TARGETS
   imu_preintegration_node
   feature_extraction_node
   laser_mapping_node
+  frame_normalizer_node
   DESTINATION lib/${PROJECT_NAME}
 )
 

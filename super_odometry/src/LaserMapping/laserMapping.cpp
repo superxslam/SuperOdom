@@ -200,7 +200,7 @@ namespace super_odometry {
         this->declare_parameter("laser_mapping_node.init_pitch", 0.0);
         this->declare_parameter("laser_mapping_node.init_yaw", 0.0);
         this->declare_parameter("map_dir", "pointcloud_local.pcd");
-
+        
 
         // Get parameters
         config_.lineRes = this->get_parameter("laser_mapping_node.mapping_line_resolution").as_double();
@@ -219,7 +219,7 @@ namespace super_odometry {
         config_.localization_mode = this->get_parameter("laser_mapping_node.localization_mode").as_bool();
         config_.read_pose_file = this->get_parameter("laser_mapping_node.read_pose_file").as_bool();
         config_.use_imu_roll_pitch = USE_IMU_ROLL_PITCH;
-
+        
         if(config_.read_pose_file)
         {   
             std::vector<utils::OdometryData> odometryResults;

@@ -318,7 +318,7 @@ namespace super_odometry {
         // insert predicted values
         gtsam::NavState propState_ =
                 imuIntegratorOpt_->predict(prevState_, prevBias_);
-        auto diff  = curPose.translation() - propState_.pose().translation();
+
 
         gtsam::PriorFactor<gtsam::Pose3> pose_factor(X(key), curPose,
                                                      correctionNoise);
@@ -769,6 +769,56 @@ void imuPreintegration::publishTransform(nav_msgs::msg::Odometry &odometry, cons
     transform_stamped_.transform = tf2::toMsg(transform);
     if(frame_count%1==0)
         br.sendTransform(transform_stamped_);
+    
+    //Publish the static gravity aligned tf 
+    geometry_msgs::msg::TransformStamped transform_gravity_aligned;
+    transform_gravity_aligned.header.stamp = thisImu.header.stamp;
+    transform_gravity_aligned.header.frame_id = WORLD_FRAME;
+    transform_gravity_aligned.child_frame_id = "gravity_aligned";
+    {
+        Eigen::Quaterniond qS(imu_Init->imu_laser_R_Gravity);
+        qS.normalize();
+        transform_gravity_aligned.transform.rotation.w = qS.w();
+        transform_gravity_aligned.transform.rotation.x = qS.x();
+        transform_gravity_aligned.transform.rotation.y = qS.y();
+        transform_gravity_aligned.transform.rotation.z = qS.z();
+    }
+    transform_gravity_aligned.transform.translation.x = 0.0;
+    transform_gravity_aligned.transform.translation.y = 0.0;
+    transform_gravity_aligned.transform.translation.z = 0.0;
+    if(frame_count%1==0)
+        br.sendTransform(transform_gravity_aligned);
+
+    // // Publish the gravity aligned tf from gravity_aligned frame to world frame 
+    // geometry_msgs::msg::TransformStamped transform_gravity_to_world;
+    // transform_gravity_to_world.header.stamp = thisImu.header.stamp;
+    // transform_gravity_to_world.header.frame_id = WORLD_FRAME;
+    // transform_gravity_to_world.child_frame_id = "gravity";
+    // // T_g_s: gravity -> sensor (rotation qS, zero translation)
+    // tf2::Transform T_g_s;
+    // T_g_s.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
+    // Eigen::Quaterniond qS(imu_Init->imu_laser_R_Gravity);
+    // qS.normalize();
+    // tf2::Quaternion q_g_s(qS.x(), qS.y(), qS.z(), qS.w());
+    // T_g_s.setRotation(q_g_s);
+
+    // // T_s_w: sensor -> world (from odometry pose)
+    // tf2::Transform T_s_w;
+    // {
+    // const auto &pos = odometry.pose.pose.position;
+    // const auto &ori = odometry.pose.pose.orientation;
+    // T_s_w.setOrigin(tf2::Vector3(pos.x, pos.y, pos.z));
+    // tf2::Quaternion q_s_w(ori.x, ori.y, ori.z, ori.w);
+    // T_s_w.setRotation(q_s_w);
+    // }
+
+    // // Compose gravity -> world
+    // tf2::Transform T_g_w = T_g_s * T_s_w;
+    // transform_gravity_to_world.transform = tf2::toMsg(T_g_w);
+
+    // br.sendTransform(transform_gravity_to_world);
+
+
 }
 
 void imuPreintegration::updateAndPublishPath(nav_msgs::msg::Odometry &odometry, const sensor_msgs::msg::Imu& thisImu){
@@ -857,7 +907,7 @@ const sensor_msgs::msg::Imu &thisImu, const gtsam::NavState &currentState){
                     thisImu.linear_acceleration.y,
                     thisImu.linear_acceleration.z);
     // For static: g_w_est = -R_wb * f_b should be ~ [0,0,-g]
-    Eigen::Vector3d g_w_est = -R_wb * f_b;
+    // Eigen::Vector3d g_w_est = -R_wb * f_b;
    // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
    //     "g_w_est = [%.3f, %.3f, %.3f], |g|=%.3f", g_w_est.x(), g_w_est.y(), g_w_est.z(), g_w_est.norm());
 }

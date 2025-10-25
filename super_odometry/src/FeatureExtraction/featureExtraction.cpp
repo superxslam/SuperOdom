@@ -685,8 +685,6 @@ void featureExtraction::removePointDistortion(
             // Extract features and publish
             extractFeatures(lidar_start_time, lidar_msg, q_w_original_l);
 
-            //RCLCPP_INFO(this->get_logger(), "\033[1;32m q_w_original_l: %.3f, %.3f, %.3f, %.3f.\033[0m", q_w_original_l.w(), q_w_original_l.x(), q_w_original_l.y(), q_w_original_l.z());
-
             LASER_CAMERA_SYNC_SUCCESS = false;
             LASER_IMU_SYNC_SCCUESS = false;
         
@@ -736,9 +734,9 @@ void featureExtraction::removePointDistortion(
             const auto& prev = points[i-1];
             float dist_sq = curr.x * curr.x + curr.y * curr.y + curr.z * curr.z;  
             // Fast coordinate difference check
-            if ((abs(curr.x - prev.x) > 1e-7) || 
-                (abs(curr.y - prev.y) > 1e-7) || 
-                (abs(curr.z - prev.z) > 1e-7) &&
+            if (((abs(curr.x - prev.x) > 1e-7) || 
+                 (abs(curr.y - prev.y) > 1e-7) || 
+                 (abs(curr.z - prev.z) > 1e-7)) &&
                 (dist_sq > block_range_sq))
             {
                 // Direct push without temporary variable
@@ -760,6 +758,7 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
     {
        return std::min(10, base_skip*2);
     }
+    return base_skip;
 }
 
 
@@ -827,7 +826,6 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
             
             imudata->q_w_i = last_imu->q_w_i * delta_r;
             imudata->q_w_i.normalize();
-            //std::cout<<"IMU Orientation 111: "<<imudata->q_w_i.matrix().transpose()<<std::endl;
         } else if (config_.use_imu_roll_pitch) {
             tf2::Quaternion orientation_curr(imudata->q_w_i.x(),
                                         imudata->q_w_i.y(),
@@ -844,7 +842,6 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
                                             first_orientation.x(),
                                             first_orientation.y(),
                                             first_orientation.z());
-           // std::cout<<"IMU Orientation 222: "<<imudata->q_w_i.matrix().transpose()<<std::endl;
         }
     }
 
