@@ -112,6 +112,8 @@ void printTransform(const Transformd& T, const std::string& name);
 
 void transformOusterPoints(point_os::OusterPointXYZIRT const *const pi, point_os::PointcloudXYZITR *const po, Transformd &transform);
 
+bool savePly(pcl::PointCloud<PointType>::Ptr pcl_to_save, rclcpp::Node::SharedPtr node);
+
 
 template<typename T>
 inline constexpr T Deg2Rad(const T &deg) { return deg / 180. * M_PI; }

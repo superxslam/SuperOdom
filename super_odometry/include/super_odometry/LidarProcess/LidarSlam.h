@@ -23,8 +23,8 @@
 
 #include <sophus/se3.hpp>
 #include <std_msgs/msg/float32.hpp>
+#include <filesystem>
 
-// #include "super_odometry/LidarProcess/Utilities.h"
 #include "super_odometry/LidarProcess/factor/SE3AbsolutatePoseFactor.h"
 #include "super_odometry/LidarProcess/factor/lidarOptimization.h"
 #include "super_odometry/LidarProcess/factor/pose_local_parameterization.h"
@@ -32,6 +32,7 @@
 #include <pcl/common/common.h>
 #include <pcl/common/transforms.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
 #include <Eigen/Dense>
 #include <glog/logging.h>
 #include "super_odometry/tic_toc.h"
@@ -262,6 +263,7 @@ namespace super_odometry {
 
         bool bInitialization = false;
         bool isDegenerate = false;
+        bool save_ply = false;
 
         UndistortionMode Undistortion = UndistortionMode::NONE;
         std::array<std::atomic_int, Feature_observability::nFeatureObs> PlaneFeatureHistogramObs;
@@ -282,7 +284,8 @@ namespace super_odometry {
  
         rclcpp::Node::SharedPtr node_;
 
-
+        // PLY file saving variables
+        pcl::PointCloud<pcl::PointXYZI>::Ptr pcl_to_save;
 
     public:
         LidarSLAM();

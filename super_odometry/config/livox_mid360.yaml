@@ -4,7 +4,8 @@
     laser_topic: "/lidar/scan"
     sensor: "livox"
     use_imu_roll_pitch: false
-
+    save_ply: false   # This can affect real-time performance; make sure you have enough memory for saving point cloud
+    
     world_frame: "map"
     world_frame_rot: "map_rot"
     sensor_frame: "sensor"
