@@ -11,8 +11,9 @@
 class FrameNormalizer : public rclcpp::Node {
 public:
   FrameNormalizer() : Node("frame_normalizer") {
-    this->declare_parameter<std::string>("map_aligned", "map");
-    this->declare_parameter<std::string>("gravity", "gravity_aligned");
+    this->declare_parameter<std::string>("map_frame", "map");
+    this->declare_parameter<std::string>("sensor_frame", "sensor");
+    this->declare_parameter<std::string>("gravity_frame", "gravity");
     this->declare_parameter<std::string>("imu_odom_in", "/state_estimation");
     this->declare_parameter<std::string>("lidar_odom_in", "/laser_odometry");
     this->declare_parameter<std::string>("map_in", "/laser_cloud_map");
@@ -23,8 +24,9 @@ public:
     this->declare_parameter<std::string>("scan_out", "/SuperOdom/registered_scan_aligned");
     this->declare_parameter<bool>("rotate_twist", false);
 
-    frame_aligned_ = this->get_parameter("map_aligned").as_string();
-    frame_raw_ = this->get_parameter("gravity").as_string();
+    frame_map_ = this->get_parameter("map_frame").as_string();
+    frame_sensor_ = this->get_parameter("sensor_frame").as_string();
+    frame_gravity_ = this->get_parameter("gravity_frame").as_string();
     imu_in_ = this->get_parameter("imu_odom_in").as_string();
     lio_in_ = this->get_parameter("lidar_odom_in").as_string();
     map_in_ = this->get_parameter("map_in").as_string();
@@ -59,14 +61,14 @@ public:
 private:
   void refreshTransform() {
     try {
-      auto ts = tf_buffer_->lookupTransform(frame_aligned_, frame_raw_, tf2::TimePointZero);
+      auto ts = tf_buffer_->lookupTransform(frame_sensor_, frame_gravity_, tf2::TimePointZero);
       Eigen::Isometry3d T = tf2::transformToEigen(ts.transform);
       R_ = T.rotation();
       have_tf_ = true;
     } catch (const std::exception &e) {
       have_tf_ = false;
       RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-        "Waiting for TF %s -> %s: %s", frame_aligned_.c_str(), frame_raw_.c_str(), e.what());
+        "Waiting for TF %s -> %s: %s", frame_sensor_.c_str(), frame_gravity_.c_str(), e.what());
     }
   }
 
@@ -74,7 +76,7 @@ private:
 
     Eigen::Matrix3d Rmsg;
     try {
-      auto ts = tf_buffer_->lookupTransform(frame_aligned_, frame_raw_, msg->header.stamp);
+      auto ts = tf_buffer_->lookupTransform(frame_sensor_, frame_gravity_, msg->header.stamp);
       Eigen::Isometry3d T = tf2::transformToEigen(ts.transform);
       Rmsg = T.rotation();
     } catch (const std::exception &e) {
@@ -124,7 +126,7 @@ private:
     }
 
     // Frame id to aligned
-    out.header.frame_id = frame_aligned_;
+    out.header.frame_id = frame_map_;
     if (is_imu) pub_imu_->publish(out);
     else        pub_lio_->publish(out);
   }
@@ -132,7 +134,7 @@ private:
   void mapCb(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     Eigen::Matrix3d Rmsg;
     try {
-      auto ts = tf_buffer_->lookupTransform(frame_aligned_, frame_raw_, msg->header.stamp);
+      auto ts = tf_buffer_->lookupTransform(frame_sensor_, frame_gravity_, msg->header.stamp);
       Eigen::Isometry3d T = tf2::transformToEigen(ts.transform);
       Rmsg = T.rotation();
     } catch (const std::exception &e) {
@@ -147,14 +149,14 @@ private:
     sensor_msgs::msg::PointCloud2 out;
     pcl::toROSMsg(cloud_out, out);
     out.header = msg->header;
-    out.header.frame_id = frame_aligned_;
+    out.header.frame_id = frame_map_;
     pub_map_->publish(out);
   }
 
   void scanCb(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     Eigen::Matrix3d Rmsg;
     try {
-      auto ts = tf_buffer_->lookupTransform(frame_aligned_, frame_raw_, msg->header.stamp);
+      auto ts = tf_buffer_->lookupTransform(frame_sensor_, frame_gravity_, msg->header.stamp);
       Eigen::Isometry3d T = tf2::transformToEigen(ts.transform);
       Rmsg = T.rotation();
     } catch (const std::exception &e) {
@@ -169,7 +171,7 @@ private:
     sensor_msgs::msg::PointCloud2 out;
     pcl::toROSMsg(cloud_out, out);
     out.header = msg->header;
-    out.header.frame_id = frame_aligned_;
+    out.header.frame_id = frame_map_;
     pub_scan_->publish(out);
   }
 
@@ -180,7 +182,7 @@ private:
   bool have_tf_ = false;
 
   // Topics
-  std::string frame_aligned_, frame_raw_;
+  std::string frame_map_, frame_sensor_, frame_gravity_;
   std::string imu_in_, lio_in_, map_in_;
   std::string scan_in_;
   std::string imu_out_, lio_out_, map_out_, scan_out_;

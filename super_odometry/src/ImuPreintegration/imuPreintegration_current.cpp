@@ -773,8 +773,8 @@ void imuPreintegration::publishTransform(nav_msgs::msg::Odometry &odometry, cons
     //Publish the static gravity aligned tf 
     geometry_msgs::msg::TransformStamped transform_gravity_aligned;
     transform_gravity_aligned.header.stamp = thisImu.header.stamp;
-    transform_gravity_aligned.header.frame_id = WORLD_FRAME;
-    transform_gravity_aligned.child_frame_id = "gravity_aligned";
+    transform_gravity_aligned.header.frame_id = SENSOR_FRAME;
+    transform_gravity_aligned.child_frame_id = "gravity";
     {
         Eigen::Quaterniond qS(imu_Init->imu_laser_R_Gravity);
         qS.normalize();
@@ -788,35 +788,6 @@ void imuPreintegration::publishTransform(nav_msgs::msg::Odometry &odometry, cons
     transform_gravity_aligned.transform.translation.z = 0.0;
     if(frame_count%1==0)
         br.sendTransform(transform_gravity_aligned);
-
-    // // Publish the gravity aligned tf from gravity_aligned frame to world frame 
-    // geometry_msgs::msg::TransformStamped transform_gravity_to_world;
-    // transform_gravity_to_world.header.stamp = thisImu.header.stamp;
-    // transform_gravity_to_world.header.frame_id = WORLD_FRAME;
-    // transform_gravity_to_world.child_frame_id = "gravity";
-    // // T_g_s: gravity -> sensor (rotation qS, zero translation)
-    // tf2::Transform T_g_s;
-    // T_g_s.setOrigin(tf2::Vector3(0.0, 0.0, 0.0));
-    // Eigen::Quaterniond qS(imu_Init->imu_laser_R_Gravity);
-    // qS.normalize();
-    // tf2::Quaternion q_g_s(qS.x(), qS.y(), qS.z(), qS.w());
-    // T_g_s.setRotation(q_g_s);
-
-    // // T_s_w: sensor -> world (from odometry pose)
-    // tf2::Transform T_s_w;
-    // {
-    // const auto &pos = odometry.pose.pose.position;
-    // const auto &ori = odometry.pose.pose.orientation;
-    // T_s_w.setOrigin(tf2::Vector3(pos.x, pos.y, pos.z));
-    // tf2::Quaternion q_s_w(ori.x, ori.y, ori.z, ori.w);
-    // T_s_w.setRotation(q_s_w);
-    // }
-
-    // // Compose gravity -> world
-    // tf2::Transform T_g_w = T_g_s * T_s_w;
-    // transform_gravity_to_world.transform = tf2::toMsg(T_g_w);
-
-    // br.sendTransform(transform_gravity_to_world);
 
 
 }

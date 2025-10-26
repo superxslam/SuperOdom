@@ -184,7 +184,7 @@ namespace super_odometry {
         pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr lidar_msg;
         lidarBuf.getFirstMeas(lidar_msg);
 
-        double lidar_end_time = lidar_start_time + lidar_msg->back().time;
+        //double lidar_end_time = lidar_start_time + lidar_msg->back().time;
 
         // obtain the current imu message
         double meas_start_time=0;
@@ -193,7 +193,6 @@ namespace super_odometry {
         double meas_end_time=0;
         measureBuf.getLastTime(meas_end_time);
 
-        const double imu_period = 1.0/imu_Init->imu_frequency;
         
         const double sync_tolearance =0.05;
 
@@ -223,9 +222,6 @@ namespace super_odometry {
         MapRingBuffer<BufferType> &buffer,
         pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &lidar_msg)
     {
-        
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
-        "\033 using IMU-based distortion removal.\033[0m");
         // Step 1: Define how to extract pose based on buffer type
         auto extractPose = [](const BufferType& data) -> Transformd {
             Transformd pose;
@@ -322,8 +318,7 @@ void featureExtraction::removePointDistortion(
     MapRingBuffer<BufferType> &buffer,
     pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &lidar_msg)
 {
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
-    "\033 using IMU-based distortion removal.\033[0m");
+ 
     // Step 1: Define pose extraction based on buffer type
     auto extractPose = [](const BufferType& data) -> Transformd {
         Transformd pose;
@@ -393,8 +388,7 @@ void featureExtraction::removePointDistortion(
     }
     
     // Step 4: For IMU data, handle differently
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
-    "\033 jump here.\033[0m");
+
     if (is_imu_data) {
         // IMU-based distortion removal: rotation only
         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "IMU-based distortion removal");
@@ -460,8 +454,7 @@ void featureExtraction::removePointDistortion(
     } else {
         // Odometry-based path: use IMU-odometry orientation q_w_i to compute relative rotation in IMU frame
         // and re-express in LiDAR raw frame using T_l_i ... T_i_l. Deskew to START pose.
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "ODOM-based distortion removal via IMU q_w_i");
-
+   
         // Helper to interpolate IMU q_w_i at an arbitrary timestamp
         auto getImuQuatAtTime = [this](double timestamp) -> Eigen::Quaterniond {
             auto after_ptr = imuBuf.measMap_.upper_bound(timestamp);
@@ -484,8 +477,6 @@ void featureExtraction::removePointDistortion(
         };
 
         Eigen::Quaterniond q_w_i_start = getImuQuatAtTime(lidar_start_time);
-
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "ODOM-based distortion removal via IMU q_w_i start: [%.3f, %.3f, %.3f, %.3f]", q_w_i_start.w(), q_w_i_start.x(), q_w_i_start.y(), q_w_i_start.z());
 
         for (auto &point : lidar_msg->points) {
             if (!std::isfinite(point.x) || !std::isfinite(point.y) || !std::isfinite(point.z)) {
@@ -511,13 +502,13 @@ void featureExtraction::removePointDistortion(
             point.y = pt.y();
             point.z = pt.z();
 
-            static size_t sample_count_imu = 0;
-            if (sample_count_imu++ < 3) {
-                double angle = 2.0 * std::acos(std::max(-1.0, std::min(1.0, T_rel_l.rot.w())));
-                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
-                    "IMU deskew sample: dt=%.4f, |dtheta|=%.3f deg", point.time, angle * 180.0 / M_PI);
-            }
-        }
+        //     static size_t sample_count_imu = 0;
+        //     if (sample_count_imu++ < 3) {
+        //         double angle = 2.0 * std::acos(std::max(-1.0, std::min(1.0, T_rel_l.rot.w())));
+        //         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
+        //             "IMU deskew sample: dt=%.4f, |dtheta|=%.3f deg", point.time, angle * 180.0 / M_PI);
+        //     }
+         }
     }
 }
 #endif
@@ -667,13 +658,13 @@ void featureExtraction::removePointDistortion(
             {
                 RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, "\033[1;32m----> Both IMU ,VIO laserscan are synchronized!.\033[0m");
                 removePointDistortion<nav_msgs::msg::Odometry::SharedPtr>(lidar_start_time, lidar_end_time, visualOdomBuf, lidar_msg);
-                //vioRemovePointDistortion(lidar_start_time, lidar_end_time, visualOdomBuf, lidar_msg);
+             
             }
 
             if (LASER_IMU_SYNC_SCCUESS == false and LASER_CAMERA_SYNC_SUCCESS == true)
             {
                 removePointDistortion<nav_msgs::msg::Odometry::SharedPtr>(lidar_start_time, lidar_end_time, visualOdomBuf, lidar_msg);
-                //vioRemovePointDistortion(lidar_start_time, lidar_end_time, visualOdomBuf, lidar_msg);
+               
             }
 
             if (LASER_IMU_SYNC_SCCUESS == true and LASER_CAMERA_SYNC_SUCCESS == false)
@@ -695,8 +686,7 @@ void featureExtraction::removePointDistortion(
             lidarBuf.getFirstTime(lidar_start_time);
             pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr lidar_msg;
             lidarBuf.getFirstMeas(lidar_msg);
-            double lidar_end_time = lidar_start_time + lidar_msg->back().time;
-
+         
             RCLCPP_INFO(this->get_logger(), "\033[1;32m----> no IMU data, running LiDAR Odometry only.\033[0m");
             Eigen::Quaterniond default_quaternion = Eigen::Quaterniond::Identity();
             
@@ -1091,173 +1081,6 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
 #endif // LIVOX_DRIVER_AVAILABLE
 
 
-void featureExtraction::vioRemovePointDistortion(double lidar_start_time, double lidar_end_time,
-    MapRingBuffer<nav_msgs::msg::Odometry::SharedPtr> &vioBuf,
-    pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr &lidar_msg)
-{
-    auto &laser_cloud_in = *lidar_msg;
 
-    Eigen::Quaterniond q_w_original;
-    Eigen::Vector3d t_w_original;
-    {
-        double t_b_i = lidar_start_time;
-
-        auto after_ptr = vioBuf.measMap_.upper_bound(t_b_i);
-        if (after_ptr->first < 0.0001)
-        {
-            after_ptr = vioBuf.measMap_.begin();
-        }
-
-        if (after_ptr == vioBuf.measMap_.begin())
-        {
-            q_w_original.x() = after_ptr->second->pose.pose.orientation.x;
-            q_w_original.y() = after_ptr->second->pose.pose.orientation.y;
-            q_w_original.z() = after_ptr->second->pose.pose.orientation.z;
-            q_w_original.w() = after_ptr->second->pose.pose.orientation.w;
-
-            t_w_original.x() = after_ptr->second->pose.pose.position.x;
-            t_w_original.y() = after_ptr->second->pose.pose.position.y;
-            t_w_original.z() = after_ptr->second->pose.pose.position.z;
-        }
-        else
-        {
-            auto before_ptr = after_ptr;
-            before_ptr--;
-
-            double ratio_bi = (t_b_i - before_ptr->first) /
-            (after_ptr->first - before_ptr->first);
-
-            Eigen::Quaterniond q_w_i_before;
-            q_w_i_before.x() = before_ptr->second->pose.pose.orientation.x;
-            q_w_i_before.y() = before_ptr->second->pose.pose.orientation.y;
-            q_w_i_before.z() = before_ptr->second->pose.pose.orientation.z;
-            q_w_i_before.w() = before_ptr->second->pose.pose.orientation.w;
-
-            Eigen::Quaterniond q_w_i_after;
-            q_w_i_after.x() = after_ptr->second->pose.pose.orientation.x;
-            q_w_i_after.y() = after_ptr->second->pose.pose.orientation.y;
-            q_w_i_after.z() = after_ptr->second->pose.pose.orientation.z;
-            q_w_i_after.w() = after_ptr->second->pose.pose.orientation.w;
-
-            q_w_original = q_w_i_before.slerp(ratio_bi, q_w_i_after);
-            q_w_original.normalize();
-
-            Eigen::Vector3d t_w_i_before;
-            t_w_i_before.x() = before_ptr->second->pose.pose.position.x;
-            t_w_i_before.y() = before_ptr->second->pose.pose.position.y;
-            t_w_i_before.z() = before_ptr->second->pose.pose.position.z;
-
-            Eigen::Vector3d t_w_i_after;
-            t_w_i_after.x() = after_ptr->second->pose.pose.position.x;
-            t_w_i_after.y() = after_ptr->second->pose.pose.position.y;
-            t_w_i_after.z() = after_ptr->second->pose.pose.position.z;
-
-            t_w_original = (1 - ratio_bi) * t_w_i_before + ratio_bi * t_w_i_after;
-        }
-    }
-
-    Transformd T_w_original_i(q_w_original, t_w_original);
-
-    // VIO data is already in LiDAR frame, no conversion needed
-    Transformd T_w_original_l = T_w_original_i;
-    q_w_original_l = T_w_original_l.rot;
-    q_w_original_l.normalize();
-    t_w_original_l = T_w_original_l.pos;
-
-    // Debug logging
-    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000,
-    "VIO Original - q_start: [%.3f, %.3f, %.3f, %.3f], t_start: [%.3f, %.3f, %.3f]",
-    q_w_original.w(), q_w_original.x(), q_w_original.y(), q_w_original.z(),
-    t_w_original.x(), t_w_original.y(), t_w_original.z());
-
-    for (auto &point : laser_cloud_in)
-    {
-        double t_b_i = point.time + lidar_start_time;
-
-        auto after_ptr = vioBuf.measMap_.upper_bound(t_b_i);
-
-        if (after_ptr == vioBuf.measMap_.end()) {
-            after_ptr = std::prev(vioBuf.measMap_.end());
-        }
-
-        Eigen::Quaterniond q_w_i;
-        Eigen::Vector3d t_w_i;
-
-        if (after_ptr->first < 0.0001)
-        {
-            after_ptr = vioBuf.measMap_.begin();
-        }
-
-        if (after_ptr == vioBuf.measMap_.begin())
-        {
-            q_w_i.x() = after_ptr->second->pose.pose.orientation.x;
-            q_w_i.y() = after_ptr->second->pose.pose.orientation.y;
-            q_w_i.z() = after_ptr->second->pose.pose.orientation.z;
-            q_w_i.w() = after_ptr->second->pose.pose.orientation.w;
-
-            t_w_i.x() = after_ptr->second->pose.pose.position.x;
-            t_w_i.y() = after_ptr->second->pose.pose.position.y;
-            t_w_i.z() = after_ptr->second->pose.pose.position.z;
-        }
-        else
-        {
-            // auto before_ptr = after_ptr;
-            // before_ptr--;
-
-            auto before_ptr = std::prev(after_ptr);
-            double ratio_bi = (t_b_i - before_ptr->first) / (after_ptr->first - before_ptr->first);
-
-            Eigen::Quaterniond q_w_i_before;
-            q_w_i_before.x() = before_ptr->second->pose.pose.orientation.x;
-            q_w_i_before.y() = before_ptr->second->pose.pose.orientation.y;
-            q_w_i_before.z() = before_ptr->second->pose.pose.orientation.z;
-            q_w_i_before.w() = before_ptr->second->pose.pose.orientation.w;
-
-            Eigen::Quaterniond q_w_i_after;
-            q_w_i_after.x() = after_ptr->second->pose.pose.orientation.x;
-            q_w_i_after.y() = after_ptr->second->pose.pose.orientation.y;
-            q_w_i_after.z() = after_ptr->second->pose.pose.orientation.z;
-            q_w_i_after.w() = after_ptr->second->pose.pose.orientation.w;
-
-            q_w_i = q_w_i_before.slerp(ratio_bi, q_w_i_after);
-            q_w_i.normalize();
-
-            Eigen::Vector3d t_w_i_before;
-            t_w_i_before.x() = before_ptr->second->pose.pose.position.x;
-            t_w_i_before.y() = before_ptr->second->pose.pose.position.y;
-            t_w_i_before.z() = before_ptr->second->pose.pose.position.z;
-
-            Eigen::Vector3d t_w_i_after;
-            t_w_i_after.x() = after_ptr->second->pose.pose.position.x;
-            t_w_i_after.y() = after_ptr->second->pose.pose.position.y;
-            t_w_i_after.z() = after_ptr->second->pose.pose.position.z;
-
-            t_w_i = (1 - ratio_bi) * t_w_i_before + ratio_bi * t_w_i_after;
-        }
-
-        Transformd T_w_i(q_w_i, t_w_i);
-
-        Transformd T_original_i = T_w_original_i.inverse() * T_w_i;
-
-        // VIO is already in LiDAR frame, no conversion needed
-        Transformd T_original_i_rot_only(T_original_i.rot, Eigen::Vector3d::Zero());
-        Transformd T_original_i_l = T_l_i * T_original_i_rot_only * T_i_l;
-
-        q_w_original_l = T_original_i_l.rot;
-        q_w_original_l.normalize();
-        t_w_original_l = T_original_i_l.pos;
-
-        if (std::isfinite(point.x) && std::isfinite(point.y) &&
-        std::isfinite(point.z))
-        {
-            Eigen::Vector3d pt{point.x, point.y, point.z};
-            pt = T_original_i_l * pt;
-
-            point.x = pt.x();
-            point.y = pt.y();
-            point.z = pt.z();
-        }
-    }
-}
 
 } // namespace super_odometry

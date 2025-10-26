@@ -810,9 +810,9 @@ return PredictionSource::CONSTANT_VELOCITY;
                 rclcpp::Time processing_end = rclcpp::Clock{RCL_ROS_TIME}.now();
                 rclcpp::Duration processing_time = processing_end - processing_start;
                 slam.stats.latency = processing_time.seconds() * 1000;
-                // std::cout<<"Processing time: "<<slam.stats.latency<<" ms"<<std::endl;
+                RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "LiDAR Mapping Processing time: %.3f ms", slam.stats.latency);
                
-                //updateStatsAndDebugInfo();
+        
 
             }catch(const std::exception&e){
                 RCLCPP_ERROR(this->get_logger(), "Error in frame processing: %s", e.what());
