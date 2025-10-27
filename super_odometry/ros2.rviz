@@ -13,7 +13,7 @@ Panels:
         - /TF1/Frames1
         - /GlobalMap1
       Splitter Ratio: 0.5
-    Tree Height: 592
+    Tree Height: 250
   - Class: rviz_common/Selection
     Name: Selection
   - Class: rviz_common/Tool Properties
@@ -356,25 +356,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/XYOrbit
-      Distance: 40.046539306640625
+      Distance: 42.84617233276367
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -9.318248748779297
-        Y: -5.364147663116455
-        Z: -1.1523090600967407
+        X: 11.649059295654297
+        Y: -4.06821870803833
+        Z: -1.1523573398590088
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.5547963380813599
+      Pitch: 0.9547960162162781
       Target Frame: map
       Value: XYOrbit (rviz_default_plugins)
-      Yaw: 4.308678150177002
+      Yaw: 1.5755057334899902
     Saved: ~
 Window Geometry:
   Displays:
