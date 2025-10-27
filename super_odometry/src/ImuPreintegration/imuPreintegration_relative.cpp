@@ -106,7 +106,7 @@ namespace super_odometry {
         totalKeysProcessed = 0;
 
         perf_metrics_.reset();
-        perf_logging_enabled_ = true;
+        perf_logging_enabled_ = false;
         start_time_ = std::chrono::high_resolution_clock::now();
 
         // Initialize the appropriate optimizer based on configuration
@@ -130,7 +130,7 @@ namespace super_odometry {
         } else {
             gtsam::ISAM2Params isam2_params;
             isam2_params.relinearizeThreshold = 0.1;
-            isam2_params.relinearizeSkip = 1;
+            isam2_params.relinearizeSkip = 2;
             isam2_params.findUnusedFactorSlots = true;
 
             incrementalSmoother_ = std::make_unique<gtsam::IncrementalFixedLagSmoother>(
@@ -145,7 +145,7 @@ namespace super_odometry {
     void imuPreintegration::initializeTraditionalOptimizer() {
         gtsam::ISAM2Params optParameters;
         optParameters.relinearizeThreshold = 0.1;
-        optParameters.relinearizeSkip = 1;
+        optParameters.relinearizeSkip = 2;
 
         // Enable these for better marginalization performance if enabled
         if (config_.enable_marginalization) {
@@ -183,7 +183,7 @@ namespace super_odometry {
         this->declare_parameter<double>("imu_preintegration_node.imu_acc_z_limit", 1.0);
 
         // Fixed-lag smoother parameters
-        this->declare_parameter<bool>("imu_preintegration_node.use_fixed_lag", false);
+        this->declare_parameter<bool>("imu_preintegration_node.use_fixed_lag",true);
         this->declare_parameter<double>("imu_preintegration_node.fixed_lag_size", 10.0);
         this->declare_parameter<bool>("imu_preintegration_node.use_batch_fixed_lag", false);
 
@@ -231,6 +231,29 @@ namespace super_odometry {
         lastImuT_imu = -1;
         doneFirstOpt = false;
         systemInitialized = false;
+
+        // When using fixed-lag, fully reset smoother state to avoid duplicate key insertions (e.g., B(0))
+        if (config_.use_fixed_lag) {
+            // Clear runtime state
+            imuQueOpt.clear();
+            imuQueImu.clear();
+            graphFactors.resize(0);
+            graphValues.clear();
+            keyTimestamps.clear();
+            poseHistory.clear();
+            perf_metrics_.reset();
+
+            oldestTimestamp = 0.0;
+            newestTimestamp = 0.0;
+            key = 1;
+            lastInsertedKey = 0;
+            fixedLagKeysInserted_.clear();
+
+            // Recreate the smoother backends
+            batchSmoother_.reset();
+            incrementalSmoother_.reset();
+            initializeFixedLagSmoother();
+        }
     }
 
     void imuPreintegration::initial_system(double currentCorrectionTime, gtsam::Pose3 lidarPose) {\
@@ -263,7 +286,7 @@ namespace super_odometry {
         if (config_.use_fixed_lag) {
             // Initialize fixed-lag smoother
             gtsam::NonlinearFactorGraph newFactors;
-            gtsam::Values newValues;
+            gtsam::Values newValues; newValues.clear();
             gtsam::FixedLagSmoother::KeyTimestampMap newTimestamps;
 
             newFactors.add(gtsam::PriorFactor<gtsam::Pose3>(X(0), prevPose_, priorPoseNoise));
@@ -296,6 +319,8 @@ namespace super_odometry {
             gtsam::PriorFactor<gtsam::imuBias::ConstantBias> priorBias(B(0), prevBias_, priorBiasNoise);
             graphFactors.add(priorBias);
 
+            // Ensure fresh values set to avoid duplicate key insertions
+            graphValues.clear();
             graphValues.insert(X(0), prevPose_);
             graphValues.insert(V(0), prevVel_);
             graphValues.insert(B(0), prevBias_);
@@ -308,7 +333,11 @@ namespace super_odometry {
                 newestTimestamp = currentCorrectionTime;
             }
 
-            optimizer.update(graphFactors, graphValues);
+            try {
+                optimizer.update(graphFactors, graphValues);
+            } catch (const std::exception &e) {
+                RCLCPP_WARN(this->get_logger(), "Initial optimize failed: %s", e.what());
+            }
             graphFactors.resize(0);
             graphValues.clear();
         }
@@ -365,21 +394,78 @@ namespace super_odometry {
 
         const gtsam::PreintegratedImuMeasurements &preint_imu =
                 dynamic_cast<const gtsam::PreintegratedImuMeasurements &>(*imuIntegratorOpt_);
-        newFactors.add(gtsam::ImuFactor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu));
+        const double dt_imu = imuIntegratorOpt_->deltaTij();
 
-        newFactors.add(gtsam::BetweenFactor<gtsam::Pose3>(X(key - 1), X(key), relativeImuPose, correctionNoise));
+        RCLCPP_DEBUG(this->get_logger(), "[%s:%d] key=%d dt_imu=%.6f imuQueOpt=%zu imuQueImu=%zu",
+                     __FILE__, __LINE__, key, dt_imu, imuQueOpt.size(), imuQueImu.size());
+        // Always add the lidar relative pose constraint with optional softening
+        double lidar_noise_scale = soften_constraints_ ? 3.0 : 1.0;
+        auto corr = gtsam::noiseModel::Diagonal::Sigmas(
+            (gtsam::Vector(6) <<
+                config_.lidar_correction_noise * lidar_noise_scale,
+                config_.lidar_correction_noise * lidar_noise_scale,
+                config_.lidar_correction_noise * lidar_noise_scale,
+                config_.lidar_correction_noise * lidar_noise_scale,
+                config_.lidar_correction_noise * lidar_noise_scale,
+                config_.lidar_correction_noise * lidar_noise_scale).finished());
+        newFactors.add(gtsam::BetweenFactor<gtsam::Pose3>(X(key - 1), X(key), relativeImuPose, corr));
 
-        newFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(
+        // Only add IMU/bias evolution when we have meaningful integration span
+        if (dt_imu >= 1e-4) {
+            newFactors.add(gtsam::ImuFactor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu));
+            double dt_bias = std::max(dt_imu, 1e-4);
+            newFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(
                 B(key - 1), B(key), gtsam::imuBias::ConstantBias(),
-                gtsam::noiseModel::Diagonal::Sigmas(sqrt(imuIntegratorOpt_->deltaTij()) * noiseModelBetweenBias)));
+                gtsam::noiseModel::Diagonal::Sigmas(std::sqrt(dt_bias) * noiseModelBetweenBias)));
+            RCLCPP_DEBUG(this->get_logger(), "[%s:%d] Adding IMU and bias factors (dt=%.6f)", __FILE__, __LINE__, dt_imu);
+        } else {
+            // Guard early steps: use weak priors to avoid singular systems
+            auto weakVel = gtsam::noiseModel::Isotropic::Sigma(3, 1e3);
+            auto weakBias = gtsam::noiseModel::Isotropic::Sigma(6, 1e3);
+            newFactors.add(gtsam::PriorFactor<gtsam::Vector3>(V(key), prevVel_, weakVel));
+            newFactors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(key), prevBias_, weakBias));
+            RCLCPP_WARN(this->get_logger(), "[%s:%d] dt_imu too small (%.6f); using weak priors for V/B",
+                        __FILE__, __LINE__, dt_imu);
+        }
 
-        newValues.insert(X(key), prevPose_.compose(relativeImuPose));
-        newValues.insert(V(key), propState_.v());
-        newValues.insert(B(key), prevBias_);
+        // Provide values for current step's keys; avoid inserting if key already exists in smoother (incremental)
+        std::vector<gtsam::Key> newlyAddedKeys;
+        auto shouldInsertKey = [&](gtsam::Key k) -> bool {
+            if (config_.use_batch_fixed_lag) return true; // no timestamps API; rely on exception handling
+            if (!incrementalSmoother_) return true;
+            const auto &ts = incrementalSmoother_->timestamps();
+            return ts.find(k) == ts.end();
+        };
+
+        if (shouldInsertKey(X(key))) {
+            newValues.insert(X(key), prevPose_.compose(relativeImuPose));
+            newlyAddedKeys.push_back(X(key));
+        } else {
+            RCLCPP_DEBUG(this->get_logger(), "[%s:%d] Skipping insert X(%d) - already in smoother",
+                         __FILE__, __LINE__, key);
+        }
+        if (shouldInsertKey(V(key))) {
+            newValues.insert(V(key), propState_.v());
+            newlyAddedKeys.push_back(V(key));
+        } else {
+            RCLCPP_DEBUG(this->get_logger(), "[%s:%d] Skipping insert V(%d) - already in smoother",
+                         __FILE__, __LINE__, key);
+        }
+        if (shouldInsertKey(B(key))) {
+            newValues.insert(B(key), prevBias_);
+            newlyAddedKeys.push_back(B(key));
+        } else {
+            RCLCPP_DEBUG(this->get_logger(), "[%s:%d] Skipping insert B(%d) - already in smoother",
+                         __FILE__, __LINE__, key);
+        }
 
         newTimestamps[X(key)] = curLaserodomtimestamp;
         newTimestamps[V(key)] = curLaserodomtimestamp;
         newTimestamps[B(key)] = curLaserodomtimestamp;
+
+        RCLCPP_DEBUG(this->get_logger(), "[%s:%d] Pre-update: factors=%zu newValues:{X:%d,V:%d,B:%d} time=%.6f",
+                     __FILE__, __LINE__, newFactors.size(),
+                     newValues.exists(X(key)), newValues.exists(V(key)), newValues.exists(B(key)), curLaserodomtimestamp);
 
         auto opt_start = std::chrono::high_resolution_clock::now();
 
@@ -414,12 +500,19 @@ namespace super_odometry {
                 }
             }
 
+            // Commit key insertions after a successful update
+            for (auto kAdded : newlyAddedKeys) {
+                fixedLagKeysInserted_.insert(kAdded);
+            }
+
             systemSolvedSuccessfully = true;
         }
         catch (const std::exception& e) {
             systemSolvedSuccessfully = false;
             RCLCPP_WARN(this->get_logger(), 
-                "Fixed-lag smoother update failed: %s", e.what());
+                "Fixed-lag smoother update failed: %s | key=%d factors=%zu newValues:{X:%d,V:%d,B:%d} dt_imu=%.6f",
+                e.what(), key, newFactors.size(),
+                newValues.exists(X(key)), newValues.exists(V(key)), newValues.exists(B(key)), dt_imu);
         }
 
         auto opt_end = std::chrono::high_resolution_clock::now();
@@ -470,22 +563,34 @@ namespace super_odometry {
 
         const gtsam::PreintegratedImuMeasurements &preint_imu =
                 dynamic_cast<const gtsam::PreintegratedImuMeasurements &>(*imuIntegratorOpt_);
-        gtsam::ImuFactor imu_factor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu);
-        graphFactors.add(imu_factor);
+        const double dt_imu = imuIntegratorOpt_->deltaTij();
 
         // Add relative pose constraint from lidar
-        gtsam::BetweenFactor<gtsam::Pose3> lidar_factor(X(key - 1), X(key), relativeImuPose, correctionNoise);
-        graphFactors.add(lidar_factor);
+        graphFactors.add(gtsam::BetweenFactor<gtsam::Pose3>(X(key - 1), X(key), relativeImuPose, correctionNoise));
 
-        // Add bias evolution
-        graphFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(
+        if (dt_imu >= 1e-4) {
+            // Use IMU factor and bias evolution if we have integration span
+            graphFactors.add(gtsam::ImuFactor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu));
+            double dt_bias = std::max(dt_imu, 1e-4);
+            graphFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(
                 B(key - 1), B(key), gtsam::imuBias::ConstantBias(),
-                gtsam::noiseModel::Diagonal::Sigmas(sqrt(imuIntegratorOpt_->deltaTij()) * noiseModelBetweenBias)));
+                gtsam::noiseModel::Diagonal::Sigmas(std::sqrt(dt_bias) * noiseModelBetweenBias)));
 
-        // Insert initial values
-        graphValues.insert(X(key), prevPose_.compose(relativeImuPose));
-        graphValues.insert(V(key), propState_.v());
-        graphValues.insert(B(key), prevBias_);
+            // Insert initial values
+            graphValues.insert(X(key), prevPose_.compose(relativeImuPose));
+            graphValues.insert(V(key), propState_.v());
+            graphValues.insert(B(key), prevBias_);
+        } else {
+            // When IMU integration span is ~0, avoid adding degenerate IMU/bias factors
+            auto weakVel = gtsam::noiseModel::Isotropic::Sigma(3, 1e3);
+            auto weakBias = gtsam::noiseModel::Isotropic::Sigma(6, 1e3);
+            graphFactors.add(gtsam::PriorFactor<gtsam::Vector3>(V(key), prevVel_, weakVel));
+            graphFactors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(key), prevBias_, weakBias));
+
+            graphValues.insert(X(key), prevPose_.compose(relativeImuPose));
+            graphValues.insert(V(key), prevVel_);
+            graphValues.insert(B(key), prevBias_);
+        }
 
         if (config_.enable_marginalization) {
             keyTimestamps[X(key)] = curLaserodomtimestamp;
@@ -632,10 +737,30 @@ namespace super_odometry {
         bool successOptimization = build_graph(lidarPose, currentCorrectionTime);
 
         // Check for failures
-        if (failureDetection(prevVel_, prevBias_) || !successOptimization) {
+        bool spike = failureDetection(prevVel_, prevBias_);
+        soften_constraints_ = spike;  // adaptively soften lidar when spike detected
+        if (spike || !successOptimization) {
+            if (!pending_reset_) {
+                // Cache world->local mapping for continuity
+                T_w_l_before_reset_ = worldPose * prevPose_.inverse();
+                pending_reset_ = true;
+            }
+            // Wait for IMU buffer and confirm failures
+            if (++consecutive_failures_ < consecutive_failures_threshold_ || (int)imuQueImu.size() < 10) {
+                return;
+            }
+
             RCLCPP_WARN(this->get_logger(), "Failure detected, resetting");
             resetParams();
+            // Stitch continuity
+            worldPose = T_w_l_before_reset_ * prevPose_;
+            pending_reset_ = false;
+            consecutive_failures_ = 0;
+            soften_constraints_ = false;
             return;
+        } else {
+            consecutive_failures_ = 0;
+            soften_constraints_ = false;
         }
 
         repropagate_imuodometry(currentCorrectionTime);
@@ -684,8 +809,8 @@ namespace super_odometry {
             }
         }
 
-        // Check if we need to perform smart reset
-        if (key > 20) {
+        // Check if we need to perform smart reset (only for traditional ISAM2)
+        if (!config_.use_fixed_lag && config_.enable_marginalization && key > 20) {
             double timeWindow = newestTimestamp - oldestTimestamp;
 
             if (timeWindow > config_.marginalization_window_size) {
@@ -707,8 +832,8 @@ namespace super_odometry {
             }
         }
 
-        // Hard reset if graph gets too large
-        if (key > 300) {
+        // Hard reset if graph gets too large (only for traditional ISAM2)
+        if (!config_.use_fixed_lag && key > 300) {
             RCLCPP_INFO(this->get_logger(), 
                        "Graph size exceeded maximum, performing smart reset at key %d", key);
             performSmartReset(key - 10);
@@ -735,6 +860,9 @@ namespace super_odometry {
 
         gtsam::Pose3 currentLocalPose = currentEstimate.at<gtsam::Pose3>(X(key - 1));
         gtsam::Pose3 relativeFromReset = resetPose.inverse().compose(currentLocalPose);
+
+        // Cache world-to-local mapping before modifying local state to preserve published continuity
+        gtsam::Pose3 T_w_l_old = worldPose * prevPose_.inverse();
 
         initializeTraditionalOptimizer();
 
@@ -763,6 +891,9 @@ namespace super_odometry {
         prevVel_ = currentEstimate.at<gtsam::Vector3>(V(key - 1));
         prevBias_ = currentEstimate.at<gtsam::imuBias::ConstantBias>(B(key - 1));
         prevState_ = gtsam::NavState(prevPose_, prevVel_);
+
+        // Stitch continuity in world frame after reset
+        worldPose = T_w_l_old * prevPose_;
 
         imuIntegratorImu_->resetIntegrationAndSetBias(prevBias_);
         imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
@@ -868,7 +999,7 @@ namespace super_odometry {
 
         if (perf_metrics_.last_optimization_time_ms > 50.0) {
             RCLCPP_WARN(this->get_logger(), 
-                "⚠️  Optimization time exceeding 50ms! Consider tuning parameters.");
+                " Optimization time exceeding 50ms! Consider tuning parameters.");
         }
     }
 
@@ -1260,8 +1391,8 @@ namespace super_odometry {
             return;
         }
         
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1, "\033[34m After IMU Init Success: %.3f, %.3f, %.3f\033[0m", 
-        thisImu.linear_acceleration.x, thisImu.linear_acceleration.y, thisImu.linear_acceleration.z);
+       // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1, "\033[34m After IMU Init Success: %.3f, %.3f, %.3f\033[0m", 
+        //thisImu.linear_acceleration.x, thisImu.linear_acceleration.y, thisImu.linear_acceleration.z);
         // 3. Process timing and queue management
         processTiming(thisImu);
 
@@ -1391,6 +1522,29 @@ namespace super_odometry {
 
         if(frame_count % 4 == 0)
             br.sendTransform(transform_stamped_);
+        //Publish the static gravity aligned tf 
+        geometry_msgs::msg::TransformStamped transform_gravity_aligned;
+        transform_gravity_aligned.header.stamp = thisImu.header.stamp;
+        transform_gravity_aligned.header.frame_id = SENSOR_FRAME;
+        transform_gravity_aligned.child_frame_id = "gravity";
+        {
+          
+            Eigen::Quaterniond qS;
+            qS.setIdentity();
+            //Set identity is becasue we use the relative constraints.
+            //If we use the absolute constraints, we should use the imu_Init->imu_laser_R_Gravity
+            // Eigen::Quaterniond qS(imu_Init->imu_laser_R_Gravity);
+            qS.normalize();
+            transform_gravity_aligned.transform.rotation.w = qS.w();
+            transform_gravity_aligned.transform.rotation.x = qS.x();
+            transform_gravity_aligned.transform.rotation.y = qS.y();
+            transform_gravity_aligned.transform.rotation.z = qS.z();
+        }
+        transform_gravity_aligned.transform.translation.x = 0.0;
+        transform_gravity_aligned.transform.translation.y = 0.0;
+        transform_gravity_aligned.transform.translation.z = 0.0;
+        if(frame_count%1==0)
+            br.sendTransform(transform_gravity_aligned);
     }
 
     void imuPreintegration::updateAndPublishPath(nav_msgs::msg::Odometry &odometry, 
@@ -1479,13 +1633,12 @@ namespace super_odometry {
                             thisImu.linear_acceleration.y,
                             thisImu.linear_acceleration.z);
         // optional: bias-compensate the measurement
-        Eigen::Vector3d f_b_ub = f_b - Eigen::Vector3d(prevBiasOdom.accelerometer().x(),
-                                                        prevBiasOdom.accelerometer().y(),
-                                                        prevBiasOdom.accelerometer().z());
-        Eigen::Vector3d g_w_est = -R_wb * f_b_ub;
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
-            "g_w_est = [%.3f, %.3f, %.3f], |g|=%.3f", g_w_est.x(), g_w_est.y(), g_w_est.z(), g_w_est.norm());
-            }
-
+        // Eigen::Vector3d f_b_ub = f_b - Eigen::Vector3d(prevBiasOdom.accelerometer().x(),
+        //                                                 prevBiasOdom.accelerometer().y(),
+        //                                                 prevBiasOdom.accelerometer().z());
+        // Eigen::Vector3d g_w_est = -R_wb * f_b_ub;
+        // RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
+        //     "g_w_est = [%.3f, %.3f, %.3f], |g|=%.3f", g_w_est.x(), g_w_est.y(), g_w_est.z(), g_w_est.norm());
+        }
 
 } // end namespace super_odometry

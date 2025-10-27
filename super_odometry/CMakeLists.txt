@@ -52,6 +52,7 @@ find_package(Ceres REQUIRED)
 find_package(GTSAM REQUIRED QUIET)
 find_package(GTSAM_UNSTABLE REQUIRED QUIET)
 find_package(TBB REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(livox_ros_driver2 QUIET)
 
 # Include directories
@@ -85,7 +86,7 @@ set(GTSAM_LIBRARIES gtsam gtsam_unstable)
 # SuperOdom Library
 add_library(SuperOdomLib SHARED
   src/FeatureExtraction/featureExtraction.cpp
-  src/ImuPreintegration/imuPreintegration_current.cpp
+  src/ImuPreintegration/imuPreintegration_relative.cpp
   src/LaserMapping/laserMapping.cpp
   src/LaserMapping/lidarOptimization.cpp
   src/LaserMapping/LocalMap.cpp
@@ -163,7 +164,7 @@ target_link_libraries(laser_mapping_node
 # Tools: frame_normalizer_node
 add_executable(frame_normalizer_node src/frame_normalizer_node.cpp)
 ament_target_dependencies(frame_normalizer_node rclcpp nav_msgs sensor_msgs tf2_ros tf2_eigen)
-target_link_libraries(frame_normalizer_node Eigen3::Eigen ${PCL_LIBRARIES})
+target_link_libraries(frame_normalizer_node Eigen3::Eigen ${PCL_LIBRARIES} ${OpenCV_LIBRARIES})
 
 # Install Exported Libraries
 ament_export_targets(export_super_odometry HAS_LIBRARY_TARGET)

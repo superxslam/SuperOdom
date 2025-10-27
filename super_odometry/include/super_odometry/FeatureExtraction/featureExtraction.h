@@ -117,6 +117,9 @@ namespace super_odometry {
 
         void laserCloudHandler(const sensor_msgs::msg::PointCloud2::SharedPtr laserCloudMsg);
 
+        // Livox MID360 standard PointCloud2 (no per-point time) handler
+        void livoxStandardHandler(const sensor_msgs::msg::PointCloud2::SharedPtr msg);
+
 #ifdef LIVOX_DRIVER_AVAILABLE
         void livoxHandler(const livox_ros_driver2::msg::CustomMsg::UniquePtr msg);
 #endif
@@ -189,6 +192,7 @@ namespace super_odometry {
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr subOdom;
 #ifdef LIVOX_DRIVER_AVAILABLE
         rclcpp::Subscription<livox_ros_driver2::msg::CustomMsg>::SharedPtr subLivoxCloud;
+        rclcpp::Subscription<sensor_msgs::msg::PointCloud2>::SharedPtr subLivoxStandardCloud;
 #endif
 
         // Publishers
@@ -210,6 +214,7 @@ namespace super_odometry {
         bool LASER_CAMERA_SYNC_SUCCESS = false;
         bool IMU_INIT=false;
         double m_imuPeriod;
+        double last_lidar_msg_time_ = -1.0;
 
         super_odometry_msgs::msg::LaserFeature laserFeature;
         std_msgs::msg::Header FeatureHeader;

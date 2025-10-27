@@ -48,6 +48,7 @@
 #include <sstream>
 #include <iomanip>
 #include <memory>
+#include <unordered_set>
 
 namespace super_odometry {
 
@@ -100,7 +101,7 @@ namespace super_odometry {
         virtual ~imuPreintegration();
 
         static constexpr double delta_t = 0;
-        static constexpr double imu_laser_timedelay= 0.8;
+        static constexpr double imu_laser_timedelay= 2.0;
 
         // Unified performance monitoring structure
         struct PerformanceMetrics {
@@ -212,7 +213,10 @@ namespace super_odometry {
         // Utility template
         template<typename T>
         double secs(T msg) {
-            return msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9;
+            // Guard non-monotonic or invalid timestamps by clamping
+            double t = msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9;
+            if (!std::isfinite(t)) return 0.0;
+            return t;
         }
 
     private:
@@ -270,6 +274,7 @@ namespace super_odometry {
 
         // Key tracking across resets/marginalizations
         int key = 1;
+        int lastInsertedKey = 0;  // Track last key successfully inserted into the smoother
         int totalKeysProcessed = 0;  // Total keys processed across all resets
         gtsam::Pose3 accumulatedWorldTransform;  // Accumulated transform from resets
 
@@ -278,6 +283,18 @@ namespace super_odometry {
         bool perf_logging_enabled_ = true;
         double last_reset_timestamp_ = 0.0;
         std::chrono::high_resolution_clock::time_point start_time_;
+
+        // Track which variable keys have been inserted into the fixed-lag smoother
+        std::unordered_set<gtsam::Key> fixedLagKeysInserted_;
+
+        // Failure gating and continuity across resets
+        int consecutive_failures_ = 0;
+        bool pending_reset_ = false;
+        gtsam::Pose3 T_w_l_before_reset_;
+
+        // Adaptive constraint handling
+        bool soften_constraints_ = false;
+        int consecutive_failures_threshold_ = 5;
 
     public:
         // Extrinsic calibration

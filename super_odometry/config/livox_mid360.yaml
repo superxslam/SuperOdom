@@ -17,10 +17,11 @@
 
     # Feature Extraction Params
     feature_extraction_node:
-        scan_line: 4 
+        scan_line: 4
         min_range: 0.2    #<!-- remove too closed points -->
         filter_point_size: 1
         mapping_skip_frame: 1
+        provide_point_time: 1
 
     # Laser Mapping Params
     laser_mapping_node:

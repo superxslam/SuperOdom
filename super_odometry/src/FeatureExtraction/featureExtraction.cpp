@@ -71,9 +71,18 @@ namespace super_odometry {
                     std::placeholders::_1), sub_options);
 #ifdef LIVOX_DRIVER_AVAILABLE
         } else if (config_.sensor == SensorType::LIVOX) {
-            subLivoxCloud = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(LASER_TOPIC, 20, 
-                    std::bind(&featureExtraction::livoxHandler, this,
-                    std::placeholders::_1), sub_options);
+            if (config_.provide_point_time) {
+                // Livox driver custom message with per-point time
+                subLivoxCloud = this->create_subscription<livox_ros_driver2::msg::CustomMsg>(LASER_TOPIC, 20, 
+                        std::bind(&featureExtraction::livoxHandler, this,
+                        std::placeholders::_1), sub_options);
+            } else {
+                // Standard PointCloud2 without per-point time
+                RCLCPP_INFO(this->get_logger(), "create subscription for livox standard handler");
+                subLivoxStandardCloud = this->create_subscription<sensor_msgs::msg::PointCloud2>(LASER_TOPIC, laser_qos, 
+                        std::bind(&featureExtraction::livoxStandardHandler, this,
+                        std::placeholders::_1), sub_options);
+            }
 #endif
         } //TODO: add this to config
 
@@ -416,13 +425,13 @@ void featureExtraction::removePointDistortion(
         // Debug: Log buffer time range
         double first_time, last_time;
         if (buffer.getFirstTime(first_time) && buffer.getLastTime(last_time)) {
-            RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
+            RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
                 "IMU buffer time range: %.6f to %.6f (span: %.6f)", 
                 first_time, last_time, last_time - first_time);
         }
         
         // Debug: Log scan timing
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
+        RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
             "Scan timing - start: %.6f, end: %.6f, duration: %.6f", 
             lidar_start_time, lidar_end_time, lidar_end_time - lidar_start_time);
         
@@ -791,12 +800,12 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
         if(IMU_INIT && config_.sensor == SensorType::LIVOX) {
             double gravity = imu_Init->gravity_norm;
             //FIXME: temporarily disable the gravity correction
-            //Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * (measurement.gyr-imu_Init->gyr_bias);
-            //Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * (measurement.accel-imu_Init->acc_bias);
+            Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * (measurement.gyr-imu_Init->gyr_bias);
+            Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * (measurement.accel-imu_Init->acc_bias);
                 
             //Eigen::Matrix3d R_i_l=T_i_l.rot().toRotationMatrix();
-            Eigen::Vector3d gyr=(measurement.gyr-imu_Init->gyr_bias);
-            Eigen::Vector3d accel=(measurement.accel-imu_Init->acc_bias);
+            // Eigen::Vector3d gyr=(measurement.gyr-imu_Init->gyr_bias);
+            // Eigen::Vector3d accel=(measurement.accel-imu_Init->acc_bias);
             imudata->acc = accel * gravity / imu_Init->acc_mean.norm();
             imudata->gyr = gyr;
         } else {
@@ -1043,10 +1052,10 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
 
         Eigen::Matrix3d rotation_matrix = Eigen::Matrix3d::Identity();
         //FIXME: temporarily disable the gravity correction
-        // if (!imuBuf.empty()) {
-        //    rotation_matrix = imu_Init->imu_laser_R_Gravity;
+        if (!imuBuf.empty()) {
+           rotation_matrix = imu_Init->imu_laser_R_Gravity;
           
-        // } 
+        } 
         
         if(config_.provide_point_time) {     
             for (uint i=0; i < msg->point_num; i++) {
@@ -1075,6 +1084,87 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
             double lidar_first_time;
             lidarBuf.getFirstTime(lidar_first_time);
             lidarBuf.clean(lidar_first_time);
+        }
+
+        m_buf.unlock();
+    }
+
+
+
+    void featureExtraction::livoxStandardHandler(const sensor_msgs::msg::PointCloud2::SharedPtr msg)
+    {
+
+       
+        frameCount = frameCount + 1;
+        if (frameCount % config_.skipFrame != 0)
+            return;
+
+        m_buf.lock();
+
+        // Convert to temporary XYZ(I)
+        pcl::PointCloud<PointType>::Ptr pl_orig(new pcl::PointCloud<PointType>());
+        pcl::fromROSMsg(*msg, *pl_orig);
+        const int N = static_cast<int>(pl_orig->points.size());
+        if (N == 0) { m_buf.unlock(); return; }
+
+        pcl::PointCloud<point_os::PointcloudXYZITR>::Ptr pointCloud(new pcl::PointCloud<point_os::PointcloudXYZITR>());
+        pointCloud->reserve(N);
+
+        // Parameters similar to your reference (yaw-based timing when no per-point time)
+        const double omega_l = 0.361 * (1.0 / scanPeriod); // SCAN_RATE ≈ 1/scanPeriod
+        std::vector<bool> is_first(config_.N_SCANS, true);
+        std::vector<double> yaw_fp(config_.N_SCANS, 0.0);
+        std::vector<float> yaw_last(config_.N_SCANS, 0.0f);
+        std::vector<float> time_last(config_.N_SCANS, 0.0f);
+
+        // Determine first/last yaw for first layer
+        int layer_first = 0;
+        if (N > 0) layer_first = 0; // ring unknown; treat as 0
+
+        for (int i = 0; i < N; ++i) {
+            point_os::PointcloudXYZITR p;
+            const auto &s = pl_orig->points[i];
+            p.x = s.x; p.y = s.y; p.z = s.z; p.intensity = s.intensity; p.ring = 0;
+
+            const double r2 = p.x*p.x + p.y*p.y + p.z*p.z;
+            if (!std::isfinite(p.x) || !std::isfinite(p.y) || !std::isfinite(p.z) || r2 < 1e-6) continue;
+
+            const double yaw = std::atan2(p.y, p.x) * 57.29578; // deg
+            int layer = 0; // MID360 standard msg doesn’t provide ring; approximate single layer
+
+            if (is_first[layer]) {
+                yaw_fp[layer] = yaw;
+                is_first[layer] = false;
+                p.time = 0.0f;
+                yaw_last[layer] = yaw;
+                time_last[layer] = p.time;
+                pointCloud->push_back(p);
+                continue;
+            }
+
+            // Compute offset time via yaw difference
+            float offset;
+            if (yaw <= yaw_fp[layer]) offset = static_cast<float>((yaw_fp[layer] - yaw) / omega_l);
+            else offset = static_cast<float>((yaw_fp[layer] - yaw + 360.0) / omega_l);
+            if (offset < time_last[layer]) offset += static_cast<float>(360.0 / omega_l);
+
+            yaw_last[layer] = yaw; time_last[layer] = offset; p.time = offset;
+            pointCloud->push_back(p);
+        }
+
+        // Normalize times into [0, scanPeriod]
+        if (!pointCloud->empty()) {
+            const float max_t = std::max(1e-6f, (*std::max_element(pointCloud->points.begin(), pointCloud->points.end(),
+                [](const auto &a, const auto &b){ return a.time < b.time; })).time);
+            const float scale = static_cast<float>(scanPeriod) / max_t;
+            for (auto &p : pointCloud->points) p.time *= scale;
+        }
+
+        manageLidarBuffer(pointCloud, msg->header.stamp.sec + msg->header.stamp.nanosec*1e-9);
+
+        if (IMU_INIT == true) {
+            undistortionAndFeatureExtraction();
+            double lidar_first_time; lidarBuf.getFirstTime(lidar_first_time); lidarBuf.clean(lidar_first_time);
         }
 
         m_buf.unlock();

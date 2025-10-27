@@ -15,11 +15,13 @@ windows:
                 - cd ~/shibo_intern_ws
                 - ros2 launch super_odometry livox_humanoid.launch.py 
           - shell_command:
-                - cd ~/dataset
+                - cd ~/dataset/20251022
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
+                - source ~/shibo_intern_ws/install/setup.bash
                 - sleep 3
-                - ros2 bag play humanoid_long_traj --topics /livox/lidar /livox/imu 
+                - bash ~/shibo_intern_ws/src/SuperOdom/script/play_bags.sh reconstruction_bag_20251022_154756_livox/ reconstruction_bag_20251022_154756_zed/
+
 
     - window_name: rviz
       focus: false
