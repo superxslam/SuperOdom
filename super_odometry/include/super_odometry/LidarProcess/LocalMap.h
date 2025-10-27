@@ -99,6 +99,9 @@ struct MapBlock {
             bnull_ = false;
             bsurf_null_ = false;
         }
+
+        // psurf_pc_->push_back(point);
+        // bnewsurf_points_add_ = true;
        
         int target_points=std::pow((voxelResulation/planeRes),2)*1.5;
         if(psurf_pc_->size()<target_points)
@@ -146,7 +149,7 @@ public:
 
     static constexpr int laserCloudNum = laserCloudWidth * laserCloudHeight * laserCloudDepth;  // 4851
 
-    static constexpr double voxelResulation = 50;
+    static constexpr double voxelResulation = 30;
     static constexpr double halfVoxelResulation = voxelResulation * 0.5;
 
 public:

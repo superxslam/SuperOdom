@@ -30,4 +30,10 @@ windows:
                 - source install/setup.bash 
                 - source /opt/ros/humble/setup.bash
                 - sleep 3
-                - rviz2 -d ros2.rviz
+                - unset LIBGL_ALWAYS_SOFTWARE
+                - unset LIBGL_ALWAYS_INDIRECT
+                - unset MESA_LOADER_DRIVER_OVERRIDE
+                - unset MESA_GL_VERSION_OVERRIDE
+                - unset MESA_GLSL_VERSION_OVERRIDE
+                - export QT_X11_NO_MITSHM=1
+                - DRI_PRIME=1 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia rviz2 -d ros2.rviz

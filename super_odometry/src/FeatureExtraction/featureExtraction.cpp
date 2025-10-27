@@ -391,11 +391,11 @@ void featureExtraction::removePointDistortion(
 
     if (is_imu_data) {
         // IMU-based distortion removal: rotation only
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "IMU-based distortion removal");
+        RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 1000, "IMU-based distortion removal");
         Eigen::Quaterniond q_start = start_pose.rot;
         
         // Debug: Log the start pose and buffer status
-        RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
+        RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 2000, 
             "IMU Start pose - q_w: [%.3f, %.3f, %.3f, %.3f], Buffer size: %d", 
             q_start.w(), q_start.x(), q_start.y(), q_start.z(), buffer.getSize());
         
@@ -505,7 +505,7 @@ void featureExtraction::removePointDistortion(
         //     static size_t sample_count_imu = 0;
         //     if (sample_count_imu++ < 3) {
         //         double angle = 2.0 * std::acos(std::max(-1.0, std::min(1.0, T_rel_l.rot.w())));
-        //         RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 1,
+        //         RCLCPP_DEBUG_THROTTLE(this->get_logger(), *this->get_clock(), 1,
         //             "IMU deskew sample: dt=%.4f, |dtheta|=%.3f deg", point.time, angle * 180.0 / M_PI);
         //     }
          }
@@ -709,7 +709,8 @@ void featureExtraction::removePointDistortion(
         //pre-allocate output for efficiency 
         pc_out_surf->reserve(pc_in->points.size()/skip_num);
 
-        int adaptive_skip=calculateAdaptiveSkip(pc_in, skip_num);
+        //int adaptive_skip=calculateAdaptiveSkip(pc_in, skip_num); //may cause unstabe performance for indoor environments 
+        int adaptive_skip = skip_num;
         
         const auto&points=pc_in->points;
 
@@ -790,9 +791,9 @@ int featureExtraction::calculateAdaptiveSkip(const pcl::PointCloud<point_os::Poi
         if(IMU_INIT && config_.sensor == SensorType::LIVOX) {
             double gravity = imu_Init->gravity_norm;
             //FIXME: temporarily disable the gravity correction
-            //Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * measurement.gyr;
-            //Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * measurement.accel;
-            
+            //Eigen::Vector3d gyr = imu_Init->imu_laser_R_Gravity * (measurement.gyr-imu_Init->gyr_bias);
+            //Eigen::Vector3d accel = imu_Init->imu_laser_R_Gravity * (measurement.accel-imu_Init->acc_bias);
+                
             //Eigen::Matrix3d R_i_l=T_i_l.rot().toRotationMatrix();
             Eigen::Vector3d gyr=(measurement.gyr-imu_Init->gyr_bias);
             Eigen::Vector3d accel=(measurement.accel-imu_Init->acc_bias);

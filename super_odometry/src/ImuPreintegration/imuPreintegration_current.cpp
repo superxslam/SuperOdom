@@ -88,14 +88,14 @@ namespace super_odometry {
         if (PROVIDE_IMU_LASER_EXTRINSIC) {
             lidar2Imu = gtsam::Pose3(gtsam::Rot3(imu_laser_R), gtsam::Point3(imu_laser_T));
             imu2Lidar = lidar2Imu.inverse();
-            std::cout<<"lidar2Imu 111: "<<lidar2Imu.matrix()<<std::endl;
+           
 
         } else {
             imu2cam = gtsam::Pose3(gtsam::Rot3(imu_camera_R), gtsam::Point3(imu_camera_T));
             cam2Lidar = gtsam::Pose3(gtsam::Rot3(cam_laser_R), gtsam::Point3(cam_laser_T));
             imu2Lidar = imu2cam.compose(cam2Lidar);
             lidar2Imu = imu2Lidar.inverse();
-            std::cout<<"lidar2Imu 222: "<<lidar2Imu.matrix()<<std::endl;
+         
         }
 
     }
@@ -227,6 +227,8 @@ namespace super_odometry {
             gravity_in_map_set_ = true;
             RCLCPP_INFO(this->get_logger(), "Set preintegration gravity vector in LiDAR map frame: [%.3f, %.3f, %.3f]",
                         preint_params_->n_gravity.x(), preint_params_->n_gravity.y(), preint_params_->n_gravity.z());
+                        //preint_params_->n_gravity = gtsam::Vector3(0.0, 0.0, -config_.imuGravity);
+
         } else {
             RCLCPP_WARN(this->get_logger(), "IMU acc_mean too small; cannot set map gravity yet.");
         }
@@ -320,25 +322,34 @@ namespace super_odometry {
                 imuIntegratorOpt_->predict(prevState_, prevBias_);
 
 
-        gtsam::PriorFactor<gtsam::Pose3> pose_factor(X(key), curPose,
-                                                     correctionNoise);
+        gtsam::PriorFactor<gtsam::Pose3> pose_factor(X(key), curPose, correctionNoise);
         graphFactors.add(pose_factor);
-                // add imu factor to graph
-        
+
+        const double dt_imu = imuIntegratorOpt_->deltaTij();
         const gtsam::PreintegratedImuMeasurements &preint_imu =
-                dynamic_cast<const gtsam::PreintegratedImuMeasurements &>(
-                        *imuIntegratorOpt_);
-        gtsam::ImuFactor imu_factor(X(key - 1), V(key - 1), X(key), V(key),
-                                    B(key - 1), preint_imu);
-        graphFactors.add(imu_factor);
-        // add imu bias between factor
-        graphFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(
+            dynamic_cast<const gtsam::PreintegratedImuMeasurements &>(*imuIntegratorOpt_);
+
+        if (dt_imu >= 1e-4) {
+            // Add IMU factor and bias evolution when we have meaningful IMU span
+            graphFactors.add(gtsam::ImuFactor(X(key - 1), V(key - 1), X(key), V(key), B(key - 1), preint_imu));
+            double dt_bias = std::max(dt_imu, 1e-4);
+            graphFactors.add(gtsam::BetweenFactor<gtsam::imuBias::ConstantBias>(
                 B(key - 1), B(key), gtsam::imuBias::ConstantBias(),
-                gtsam::noiseModel::Diagonal::Sigmas(
-                        sqrt(imuIntegratorOpt_->deltaTij()) * noiseModelBetweenBias)));
-        graphValues.insert(X(key), propState_.pose());
-        graphValues.insert(V(key), propState_.v());
-        graphValues.insert(B(key), prevBias_);
+                gtsam::noiseModel::Diagonal::Sigmas(std::sqrt(dt_bias) * noiseModelBetweenBias)));
+
+            graphValues.insert(X(key), propState_.pose());
+            graphValues.insert(V(key), propState_.v());
+            graphValues.insert(B(key), prevBias_);
+        } else {
+            // IMU span too small; add weak priors on V(key) and B(key) to avoid singularity
+            auto weakVel = gtsam::noiseModel::Isotropic::Sigma(3, 1e3);
+            auto weakBias = gtsam::noiseModel::Isotropic::Sigma(6, 1e3);
+            graphFactors.add(gtsam::PriorFactor<gtsam::Vector3>(V(key), prevVel_, weakVel));
+            graphFactors.add(gtsam::PriorFactor<gtsam::imuBias::ConstantBias>(B(key), prevBias_, weakBias));
+            graphValues.insert(X(key), curPose);
+            graphValues.insert(V(key), prevVel_);
+            graphValues.insert(B(key), prevBias_);
+        }
         
   
         // optimize
@@ -538,7 +549,7 @@ namespace super_odometry {
         imu_laser_R_Gravity=Eigen::Matrix3d::Identity(); // keep raw IMU; don't rotate into LiDAR here
 
         //FIXME: temporary set imu_laser_R_Gravity to identity matrix for debugging
-        //imu_laser_R_Gravity = Eigen::Matrix3d::Identity();
+       //mu_laser_R_Gravity = Eigen::Matrix3d::Identity();
  
 
 

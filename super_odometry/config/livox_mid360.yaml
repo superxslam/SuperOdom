@@ -2,7 +2,7 @@
   ros__parameters:
     imu_topic: "/livox/imu"
     laser_topic: "/livox/lidar"
-    odom_topic: "/state_estimation"
+    odom_topic: "/state_estimation2"
     sensor: "livox"
     use_imu_roll_pitch: false
 

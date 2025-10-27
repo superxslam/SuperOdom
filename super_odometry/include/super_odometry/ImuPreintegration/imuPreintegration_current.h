@@ -68,7 +68,7 @@ namespace super_odometry {
         imuPreintegration(const rclcpp::NodeOptions & options);
 
         static constexpr double delta_t = 0;
-        static constexpr double imu_laser_timedelay= 0.8;
+        static constexpr double imu_laser_timedelay= 2.0;
 
     public:
         void initInterface();
