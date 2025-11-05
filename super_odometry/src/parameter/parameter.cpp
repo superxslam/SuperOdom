@@ -97,6 +97,8 @@ float IMU_ACC_Z_LIMIT;
 
 bool USE_IMU_ROLL_PITCH;
 
+bool SAVE_PLY;
+
 std::string SENSOR;
 
 
@@ -295,6 +297,7 @@ bool readGlobalparam(rclcpp::Node::SharedPtr node)
     node->declare_parameter<double>("imu_acc_x_limit", 0.5);
     node->declare_parameter<double>("imu_acc_y_limit", 0.2);
     node->declare_parameter<double>("imu_acc_z_limit", 0.4);
+    node->declare_parameter<bool>("save_ply", false);
     // node->declare_parameter<bool>("use_imu_roll_pitch", false);
 
     
@@ -310,6 +313,7 @@ bool readGlobalparam(rclcpp::Node::SharedPtr node)
     ProjectName = node->get_parameter("PROJECT_NAME").as_string();
     SENSOR = node->get_parameter("sensor").as_string();
     // USE_IMU_ROLL_PITCH = node->get_parameter("use_imu_roll_pitch").as_bool();
+    SAVE_PLY = node->get_parameter("save_ply").as_bool();
     IMU_ACC_X_LIMIT = node->get_parameter("imu_acc_x_limit").as_double();
     IMU_ACC_Y_LIMIT = node->get_parameter("imu_acc_y_limit").as_double();
     IMU_ACC_Z_LIMIT = node->get_parameter("imu_acc_z_limit").as_double();
@@ -336,6 +340,8 @@ bool readGlobalparam(rclcpp::Node::SharedPtr node)
     RCLCPP_INFO(node->get_logger(), "SENSOR_FRAME_ROT %s", SENSOR_FRAME_ROT.c_str());
     RCLCPP_INFO(node->get_logger(), "ProjectName %s", ProjectName.c_str());
     RCLCPP_INFO(node->get_logger(), "SENSOR %s", SENSOR.c_str());
+    RCLCPP_INFO(node->get_logger(), "SAVE_PLY %d", SAVE_PLY);
+    RCLCPP_INFO(node->get_logger(), "SAVE_PLY %d", SAVE_PLY);
 
     return true;
 }
