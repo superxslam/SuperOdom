@@ -28,16 +28,12 @@
 
 - 🔔 **2025/06 — IMPORTANT:** Release of Super Odometry with support for both LiDAR-only and LiDAR–inertial odometry.
 
-  - For LiDAR-only use: leave the `imu_topic` unset/empty in your `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml` (or remove the IMU topic), and the odometry pipeline will run in LiDAR-only mode.
+  - For LiDAR-only use: leave the `imu_topic` unset/empty in your `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml` (or remove the IMU topic), and the odometry pipeline will run in LiDAR-only mode automatically.
 
   - Example (in your sensor config):
-
 ```yaml
 imu_topic: ""    # leave empty for LiDAR-only mode
-# or omit the imu_topic entry entirely for LiDAR-only
 ```
-
-  This makes it easier to run the system when no IMU is available.
 
 ## 📋 Table of Contents
 
