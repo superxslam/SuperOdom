@@ -268,6 +268,10 @@ We also provide tmux script for easy launch with dataset (this script only works
 cd script
 tmuxp load humanoid.yaml
 ```
+```bash
+#db3 files convert to mcap files command 
+rosbags-convert --src ~/Downloads/rosbag2_2025_09_16-13_16_21 --dst livox_sample_humble --dst-typestore ros2_humble
+```
 
 ## 📍 Localization Mode Configuration
 

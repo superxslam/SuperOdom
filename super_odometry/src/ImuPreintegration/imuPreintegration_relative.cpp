@@ -1345,7 +1345,7 @@ namespace super_odometry {
                             imu_in.linear_acceleration.z);
 
         acc = imu_laser_R_Gravity * acc;
-        acc = acc + ((gyr - gyr_pre) * 200).cross(-imu_laser_T) + gyr.cross(gyr.cross(-imu_laser_T));
+        //acc = acc + ((gyr - gyr_pre) * 200).cross(-imu_laser_T) + gyr.cross(gyr.cross(-imu_laser_T));
         imu_out.linear_acceleration.x = acc.x();
         imu_out.linear_acceleration.y = acc.y();
         imu_out.linear_acceleration.z = acc.z();
@@ -1374,7 +1374,7 @@ namespace super_odometry {
         imu_out.orientation.z = q_new.z();
         imu_out.orientation.w = q_new.w();
 
-        gyr_pre = gyr;
+      
 
         return imu_out;
     }
@@ -1412,7 +1412,7 @@ namespace super_odometry {
             nav_msgs::msg::Odometry odometry;
             prepareOdometryMessage(odometry, thisImu, currentStateLocal, currentWorldPose);
 
-            if (frame_count++ % 4 == 0) {
+            if (frame_count++ % 1 == 0) {
                 pubImuOdometry->publish(odometry);
             }
 
@@ -1533,7 +1533,7 @@ namespace super_odometry {
             qS.setIdentity();
             //Set identity is becasue we use the relative constraints.
             //If we use the absolute constraints, we should use the imu_Init->imu_laser_R_Gravity
-            // Eigen::Quaterniond qS(imu_Init->imu_laser_R_Gravity);
+            qS = Eigen::Quaterniond(imu_Init->imu_laser_R_Gravity);
             qS.normalize();
             transform_gravity_aligned.transform.rotation.w = qS.w();
             transform_gravity_aligned.transform.rotation.x = qS.x();
