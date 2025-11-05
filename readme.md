@@ -1,5 +1,8 @@
 # SuperOdometry: Lightweight LiDAR-inertial Odometry and Mapping
 
+
+
+
 <div align="center">
 
 [![Website](https://img.shields.io/badge/Website-4385f4?style=flat&logo=googlehome&logoColor=white)](https://superodometry.com/) [![License: GPL v3](https://img.shields.io/badge/License-GPL%20v3-blue.svg)](./LICENSE)
@@ -17,6 +20,24 @@
 
 > 🔥 The system has been widely tested on above platforms equipped with Livox, Velodyne and Ouster LiDAR. 
 
+## 📰 News
+
+- 🔔**2025/10** — Adapt super odometry on humanoid robot. Please check the "humanoid_ros2"  branch 
+
+- **2025/08** — Release SuperLoc code to achieve online degeneracy detection.
+
+- 🔔 **2025/06 — IMPORTANT:** Release of Super Odometry with support for both LiDAR-only and LiDAR–inertial odometry.
+
+  - For LiDAR-only use: leave the `imu_topic` unset/empty in your `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml` (or remove the IMU topic), and the odometry pipeline will run in LiDAR-only mode.
+
+  - Example (in your sensor config):
+
+```yaml
+imu_topic: ""    # leave empty for LiDAR-only mode
+# or omit the imu_topic entry entirely for LiDAR-only
+```
+
+  This makes it easier to run the system when no IMU is available.
 
 ## 📋 Table of Contents
 
@@ -36,7 +57,7 @@
    - [Configuration](#configuration)
    - [Launch Commands](#launch-commands)
    - [Visualization (RVIZ2 & Rerun)](#visualization-rviz2--rerun)
-6. [📍 Localization Mode Configuration](#-localization-mode-configuration)
+6. [📍 Localization Mode Configuration](doc/LOCALIZATION.md)
 7. [📚 Citations](#-8-citations)
 8. [🛠️ Next Plan](#9-next-plan)
 9. [📝 License](#-10-license)
@@ -46,7 +67,7 @@
 
 ## 🔥 1. Key Features
 
-- **Multi-LiDAR Support**
+- **Support LiDAR Only or LiDAR inertial Odometry**
   - Compatible with Livox, Velodyne, and Ouster sensors
 - **LiDAR-inertial Fusion**
   - Support LiDAR-inertial Fusion 
@@ -269,30 +290,11 @@ tmuxp load run.yaml
 
 ## 📍 Localization Mode Configuration
 
+Detailed localization-mode instructions (configuration examples, launch snippets, and demo dataset) have been moved to `docs/LOCALIZATION.md`.
+
 https://github.com/user-attachments/assets/42cb5480-c283-4608-84be-ff12a05d09e0
 
-> 🔥 The localization mode allows you to localize your robot by providing an initial pose and ground truth map. 
-
-Update your `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml` configuration file with:
-```yaml
-localization_mode: true         # If true, localization mode is enabled; otherwise, SLAM mode is used
-read_pose_file: false           # Set to true to read initial pose from a txt file
-init_x: 0.0                     # Initial X position for localization
-init_y: 0.0                     # Initial Y position for localization
-init_z: 0.0                     # Initial Z position for localization
-init_roll: 0.0                  # Initial roll angle
-init_pitch: 0.0                 # Initial pitch angle
-init_yaw: 0.0                   # Initial yaw angle
-```
-
-Add ground truth map map in launch file
-```yaml
-parameters=[LaunchConfiguration("config_file"),
-    { "calibration_file": LaunchConfiguration("calibration_file"),
-     "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
-}]
-```
-To quickly launch our localization module, feel free to try out this demo [dataset](https://drive.google.com/drive/folders/1WOTj4j9t5LkKkdajFlj6bZcdmPcsJipz?usp=sharing) using default initial pose configuration. 
+Quick link: [doc/LOCALIZATION.md](doc/LOCALIZATION.md)
 
 <!-- ## 📫 7. Contact
 
