@@ -18,7 +18,7 @@
     # Feature Extraction Params
     feature_extraction_node:
         scan_line: 4 
-        min_range: 0.2    #<!-- remove too closed points -->
+        min_range: 0.5    #<!-- remove too closed points -->
         filter_point_size: 1
         mapping_skip_frame: 1
 

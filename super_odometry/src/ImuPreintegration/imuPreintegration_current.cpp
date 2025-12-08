@@ -421,7 +421,7 @@ namespace super_odometry {
     void imuPreintegration::process_imu_odometry(double currentCorrectionTime, gtsam::Pose3 relativePose) {
 
         // reset graph for speed and stability
-        if (key > 50) {  // Reduced threshold for more frequent resets
+        if (key > 100) {  // Reduced threshold for more frequent resets
             reset_graph();
         }
 
@@ -817,7 +817,7 @@ void imuPreintegration::updateAndPublishPath(nav_msgs::msg::Odometry &odometry, 
         imuPath.poses.push_back(pose_stamped);
         while (!imuPath.poses.empty() &&
                 abs(secs(&imuPath.poses.front()) -
-                    secs(&imuPath.poses.back())) > 3.0)
+                    secs(&imuPath.poses.back())) > 50.0)
             imuPath.poses.erase(imuPath.poses.begin());
         if (pubImuPath->get_subscription_count() != 0)
         {

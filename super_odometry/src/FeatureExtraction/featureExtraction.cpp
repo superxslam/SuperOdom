@@ -599,7 +599,7 @@ void featureExtraction::removePointDistortion(
         laserFeature.header = FeatureHeader;
         laserFeature.imu_available = false;
         laserFeature.odom_available = false;
-
+        
       
         laserFeature.cloud_nodistortion = publishCloud<point_os::PointcloudXYZITR>(pubLaserCloud, laser_no_distortion_points, FeatureHeader.stamp, SENSOR_FRAME);
         laserFeature.cloud_corner = publishCloud<PointType>(pubEdgePoints, edgePoints, FeatureHeader.stamp, SENSOR_FRAME);

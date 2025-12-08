@@ -1,5 +1,6 @@
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
+#include <nav_msgs/msg/path.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
@@ -44,6 +45,8 @@ public:
     pub_lio_ = this->create_publisher<nav_msgs::msg::Odometry>(lio_out_, 10);
     pub_map_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(map_out_, 2);
     pub_scan_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(scan_out_, 2);
+    pub_imu_path_ = this->create_publisher<nav_msgs::msg::Path>("/SuperOdom/state_estimation_aligned_path", 10);
+    pub_lio_path_ = this->create_publisher<nav_msgs::msg::Path>("/SuperOdom/laser_odometry_aligned_path", 10);
 
     sub_imu_ = this->create_subscription<nav_msgs::msg::Odometry>(
       imu_in_, 10, [this](const nav_msgs::msg::Odometry::SharedPtr msg){ this->odomCb(msg, true); });
@@ -71,7 +74,7 @@ private:
         "Waiting for TF %s -> %s: %s", frame_sensor_.c_str(), frame_gravity_.c_str(), e.what());
     }
   }
-
+  
   void odomCb(const nav_msgs::msg::Odometry::SharedPtr msg, bool is_imu) {
 
     Eigen::Matrix3d Rmsg;
@@ -127,9 +130,36 @@ private:
 
     // Frame id to aligned
     out.header.frame_id = frame_map_;
-    if (is_imu) pub_imu_->publish(out);
-    else        pub_lio_->publish(out);
+    out.child_frame_id = frame_gravity_;
+    if (is_imu) {
+      pub_imu_->publish(out);
+      updatePath(out, imu_path_, pub_imu_path_, true);
+    } else {
+      pub_lio_->publish(out);
+      updatePath(out, lio_path_, pub_lio_path_, false);
+    }
   }
+
+  void updatePath(const nav_msgs::msg::Odometry &odom, nav_msgs::msg::Path &path, 
+                  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub, bool is_imu) {
+    static double last_imu_time = -1, last_lio_time = -1;
+    double t = rclcpp::Time(odom.header.stamp).seconds();
+    double &last_time = is_imu ? last_imu_time : last_lio_time;
+    
+    if (t - last_time > 0.1) {
+      last_time = t;
+      geometry_msgs::msg::PoseStamped ps;
+      ps.header = odom.header;
+      ps.pose = odom.pose.pose;
+      path.poses.push_back(ps);
+      while (path.poses.size() > 300) path.poses.erase(path.poses.begin());
+      if (pub->get_subscription_count() > 0) {
+        path.header = odom.header;
+        pub->publish(path);
+      }
+    }
+  }
+
 
   void mapCb(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
     Eigen::Matrix3d Rmsg;
@@ -194,6 +224,8 @@ private:
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_imu_, pub_lio_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_map_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_scan_;
+  rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub_imu_path_, pub_lio_path_;
+  nav_msgs::msg::Path imu_path_, lio_path_;
   bool rotate_twist_ = false;
   rclcpp::TimerBase::SharedPtr timer_;
 };
