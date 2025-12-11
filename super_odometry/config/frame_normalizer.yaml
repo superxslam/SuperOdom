@@ -1,0 +1,43 @@
+/**:
+  ros__parameters:
+    # Frame names
+    map_frame: "map"
+    sensor_frame: "sensor"
+    gravity_frame: "gravity"
+    
+    # Input topics
+    imu_odom_in: "/state_estimation"
+    lidar_odom_in: "/laser_odometry"
+    map_in: "/laser_cloud_map"
+    scan_in: "/registered_scan"
+    
+    # Output topics
+    imu_odom_out: "/SuperOdom/state_estimation_aligned"
+    lidar_odom_out: "/SuperOdom/laser_odometry_aligned"
+    map_out: "/SuperOdom/laser_cloud_map_aligned"
+    scan_out: "/SuperOdom/registered_scan_aligned"
+    
+    # Colorization parameters
+    use_compressed_image: true
+    image_in: "/zed/zed_node/right/image_rect_color/compressed"
+    camera_info_in: "/zed/zed_node/right/camera_info"
+    camera_frame: "camera_frame"
+    scan_color_out: "/SuperOdom/registered_scan_colorized"
+    sync_tolerance: 0.05
+    
+    # Camera extrinsics (sensor -> camera)
+    use_static_extrinsics: true
+    cam_tx: 0.10898250807257563
+    cam_ty: 0.11401182341214929
+    cam_tz: -0.1842058976916049
+    cam_qx: -0.48647692564127215
+    cam_qy: 0.010071747888767442
+    cam_qz: 0.006933289155231205
+    cam_qw: 0.8736078583750099
+    cam_roll_deg: 0.0
+    cam_pitch_deg: 0.0
+    cam_yaw_deg: 0.0
+    
+    # Twist rotation
+    rotate_twist: false
+
