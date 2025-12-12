@@ -15,6 +15,20 @@ windows:
                 - cd ~/shibo_intern_ws
                 - ros2 launch super_odometry livox_humanoid.launch.py 
           - shell_command:
+                - cd ~/shibo_intern_ws
+                - source install/setup.bash 
+                - source /opt/ros/humble/setup.bash
+                - sleep 3
+                - ros2 bag record --storage mcap \
+                 -o colorized_map \
+                 /zed/zed_node/right/image_rect_color/uncompressed \
+                 /laser_odometry_aligned \
+                 /state_estimation_aligned \
+                 /state_estimation \
+                 /laser_odometry \
+                 /tf \
+                 /registered_scan_colorized
+          - shell_command:
                 - cd ~/dataset
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 

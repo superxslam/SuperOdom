@@ -8,7 +8,10 @@
 #include <opencv2/opencv.hpp>
 #include <tf2_ros/buffer.h>
 #include <tf2_ros/transform_listener.h>
+#include <tf2_ros/transform_broadcaster.h>
+#include <tf2_ros/static_transform_broadcaster.h>
 #include <tf2_eigen/tf2_eigen.hpp>
+#include <geometry_msgs/msg/transform_stamped.hpp>
 #include <pcl/common/transforms.h>
 #include <pcl_conversions/pcl_conversions.h>
 #include <Eigen/Dense>
@@ -32,6 +35,7 @@ public:
     
     this->declare_parameter<std::string>("map_frame", "map");
     this->declare_parameter<std::string>("sensor_frame", "sensor");
+    this->declare_parameter<std::string>("image_raw_out", "/frame_normalizer/image_raw");
     this->declare_parameter<std::string>("gravity_frame", "gravity");
     this->declare_parameter<std::string>("imu_odom_in", "/state_estimation");
     this->declare_parameter<std::string>("lidar_odom_in", "/laser_odometry");
@@ -95,6 +99,7 @@ public:
     cam_info_in_ = this->get_parameter("camera_info_in").as_string();
     camera_frame_ = this->get_parameter("camera_frame").as_string();
     scan_color_out_ = this->get_parameter("scan_color_out").as_string();
+    image_raw_out_ = this->get_parameter("image_raw_out").as_string();
     sync_tolerance_ = this->get_parameter("sync_tolerance").as_double();
     
     // Debug: Print all loaded parameters
@@ -104,8 +109,8 @@ public:
     RCLCPP_INFO(this->get_logger(), "image_in: %s", image_in_.c_str());
     RCLCPP_INFO(this->get_logger(), "camera_info_in: %s", cam_info_in_.c_str());
     RCLCPP_INFO(this->get_logger(), "scan_color_out: %s", scan_color_out_.c_str());
-    use_static_extrinsics_ = this->get_parameter("use_static_extrinsics").as_bool();
-    if (use_static_extrinsics_) {
+    
+    
       const double tx = this->get_parameter("cam_tx").as_double();
       const double ty = this->get_parameter("cam_ty").as_double();
       const double tz = this->get_parameter("cam_tz").as_double();
@@ -145,17 +150,22 @@ public:
       RCLCPP_INFO(this->get_logger(), "R_sensor_camera:\n%s", ss.str().c_str());
       RCLCPP_INFO(this->get_logger(), "t_sensor_camera: [%.6f, %.6f, %.6f]", 
         t_sc_static_.x(), t_sc_static_.y(), t_sc_static_.z());
-    }
+    
+    // Publish the static sensor->camera TF once
+    publishStaticSensorCameraTF();
     rotate_twist_ = this->get_parameter("rotate_twist").as_bool();
 
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
     tf_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf_buffer_);
+    tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
+    static_tf_broadcaster_ = std::make_unique<tf2_ros::StaticTransformBroadcaster>(*this);
 
     pub_imu_ = this->create_publisher<nav_msgs::msg::Odometry>(imu_out_, 10);
     pub_lio_ = this->create_publisher<nav_msgs::msg::Odometry>(lio_out_, 10);
     pub_map_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(map_out_, 2);
     pub_scan_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(scan_out_, 2);
     pub_scan_color_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(scan_color_out_, 2);
+    pub_image_raw_ = this->create_publisher<sensor_msgs::msg::Image>(image_raw_out_, 5);
     pub_imu_path_ = this->create_publisher<nav_msgs::msg::Path>("/state_estimation_aligned_path", 10);
     pub_lo_path_ = this->create_publisher<nav_msgs::msg::Path>("/laser_odometry_aligned_path", 10);
 
@@ -252,6 +262,9 @@ private:
       "Received image at t=%.3f", rclcpp::Time(msg->header.stamp).seconds());
 
     image_buffer_.push_back(msg);
+    if (pub_image_raw_ && pub_image_raw_->get_subscription_count() > 0) {
+      pub_image_raw_->publish(*msg);
+    }
     constexpr size_t MAX_BUFFER_SIZE = 50;
     if (image_buffer_.size() > MAX_BUFFER_SIZE) {
       image_buffer_.pop_front();
@@ -281,6 +294,9 @@ private:
       img_msg->data.assign(img.data, img.data + img.total() * img.elemSize());
 
       image_buffer_.push_back(img_msg);
+      if (pub_image_raw_ && pub_image_raw_->get_subscription_count() > 0) {
+        pub_image_raw_->publish(*img_msg);
+      }
       constexpr size_t MAX_BUFFER_SIZE = 50;
       if (image_buffer_.size() > MAX_BUFFER_SIZE) {
         image_buffer_.pop_front();
@@ -381,6 +397,30 @@ private:
         "Waiting for TF %s -> %s: %s", frame_sensor_.c_str(), frame_gravity_.c_str(), e.what());
     }
   }
+
+  // Publish static sensor -> camera transform once
+  void publishStaticSensorCameraTF() {
+    if (!static_tf_broadcaster_) {
+      RCLCPP_ERROR(this->get_logger(), "Static TF broadcaster not initialized");
+      return;
+    }
+    geometry_msgs::msg::TransformStamped transform;
+    transform.header.stamp = this->now();
+    transform.header.frame_id = frame_sensor_;
+    transform.child_frame_id = camera_frame_;
+    transform.transform.translation.x = t_sc_static_.x();
+    transform.transform.translation.y = t_sc_static_.y();
+    transform.transform.translation.z = t_sc_static_.z();
+    Eigen::Quaterniond q(R_sc_static_);
+    q.normalize();
+    transform.transform.rotation.w = q.w();
+    transform.transform.rotation.x = q.x();
+    transform.transform.rotation.y = q.y();
+    transform.transform.rotation.z = q.z();
+    static_tf_broadcaster_->sendTransform(transform);
+    RCLCPP_INFO(this->get_logger(), "Published static TF: %s -> %s", frame_sensor_.c_str(), camera_frame_.c_str());
+  }
+
 
   void odomCb(const nav_msgs::msg::Odometry::SharedPtr msg, bool is_imu) {
     // Buffer lidar odometry for time synchronization with scans (for colorization)
@@ -500,6 +540,12 @@ private:
   }
 
   void scanCb(const sensor_msgs::msg::PointCloud2::SharedPtr msg) {
+    // Debug: Log when scanCb is called
+    static int scan_count = 0;
+    scan_count++;
+    RCLCPP_INFO_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+      "scanCb called (count: %d, frame_id: %s)", scan_count, msg->header.frame_id.c_str());
+    
     Eigen::Matrix3d Rmsg;
     try {
       auto ts = tf_buffer_->lookupTransform(frame_sensor_, frame_gravity_, msg->header.stamp);
@@ -551,19 +597,9 @@ private:
     // Lookup transform from sensor frame (point cloud) to camera frame at msg time
     Eigen::Matrix3d R_sc;
     Eigen::Vector3d t_sc = Eigen::Vector3d::Zero();
-    if (use_static_extrinsics_) {
-      R_sc = R_sc_static_;
-      t_sc = t_sc_static_;
-    } else {
-      try {
-        auto ts = tf_buffer_->lookupTransform(camera_frame_, frame_sensor_, msg->header.stamp);
-        Eigen::Isometry3d T = tf2::transformToEigen(ts.transform);
-        R_sc = T.rotation();
-        t_sc = T.translation();
-      } catch (const std::exception &) {
-        return;
-      }
-    }
+    R_sc = R_sc_static_;
+    t_sc = t_sc_static_;
+    
 
     // Prepare an XYZRGB cloud
     pcl::PointCloud<pcl::PointXYZRGB> color_cloud;
@@ -683,6 +719,8 @@ private:
   // TF and frame names
   std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
   std::shared_ptr<tf2_ros::TransformListener> tf_listener_;
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+  std::unique_ptr<tf2_ros::StaticTransformBroadcaster> static_tf_broadcaster_;
   Eigen::Matrix3d R_ = Eigen::Matrix3d::Identity();
   bool have_tf_ = false;
   std::string frame_map_, frame_sensor_, frame_gravity_;
@@ -690,7 +728,7 @@ private:
   // Topic names
   std::string imu_in_, lio_in_, map_in_, scan_in_;
   std::string imu_out_, lio_out_, map_out_, scan_out_;
-  std::string image_in_, cam_info_in_, camera_frame_, scan_color_out_;
+  std::string image_in_, cam_info_in_, camera_frame_, scan_color_out_, image_raw_out_;
 
   // ROS2 subscribers and publishers
   rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_imu_, sub_lio_;
@@ -700,6 +738,7 @@ private:
   rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr sub_caminfo_;
   rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr pub_imu_, pub_lio_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pub_map_, pub_scan_, pub_scan_color_;
+  rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr pub_image_raw_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr pub_imu_path_, pub_lo_path_;
   rclcpp::TimerBase::SharedPtr timer_;
   rclcpp::TimerBase::SharedPtr diagnostic_timer_;
@@ -708,7 +747,6 @@ private:
   // Configuration
   bool rotate_twist_ = false;
   double sync_tolerance_ = 0.05;
-  bool use_static_extrinsics_ = false;
   bool use_compressed_image_ = false;
 
   // Camera data and buffers

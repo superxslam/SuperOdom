@@ -12,17 +12,18 @@
     scan_in: "/registered_scan"
     
     # Output topics
-    imu_odom_out: "/SuperOdom/state_estimation_aligned"
-    lidar_odom_out: "/SuperOdom/laser_odometry_aligned"
-    map_out: "/SuperOdom/laser_cloud_map_aligned"
-    scan_out: "/SuperOdom/registered_scan_aligned"
+    imu_odom_out: "/state_estimation_aligned"
+    lidar_odom_out: "/laser_odometry_aligned"
+    map_out: "/laser_cloud_map_aligned"
+    scan_out: "/registered_scan_aligned"
+    image_raw_out: "/zed/zed_node/right/image_rect_color/uncompressed"
     
     # Colorization parameters
     use_compressed_image: true
     image_in: "/zed/zed_node/right/image_rect_color/compressed"
     camera_info_in: "/zed/zed_node/right/camera_info"
-    camera_frame: "camera_frame"
-    scan_color_out: "/SuperOdom/registered_scan_colorized"
+    camera_frame: "camera"
+    scan_color_out: "/registered_scan_colorized"
     sync_tolerance: 0.05
     
     # Camera extrinsics (sensor -> camera)
