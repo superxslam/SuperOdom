@@ -11,43 +11,47 @@ windows:
       panes:
           - shell_command:
                 - source /opt/ros/humble/setup.bash
-                - source install/setup.bash 
+                - source ~/shibo_intern_ws/install/setup.bash
                 - cd ~/shibo_intern_ws
-                - ros2 launch super_odometry livox_humanoid.launch.py 
+                - ros2 param set /use_sim_time true
+                - ros2 launch super_odometry livox_humanoid.launch.py
           - shell_command:
+                - cd ~/humanoid_dataset/12-05-dancing1
+                - source /opt/ros/humble/setup.bash
+                - source ~/shibo_intern_ws/install/setup.bash
+                - sleep 5
+                - ~/shibo_intern_ws/src/SuperOdom/script/play_humanoid_bags.sh \
+                    imu_foundation_bag_20251205_145009_livox \
+                    imu_foundation_bag_20251205_145009_other
+          - shell_command:
+                - source /opt/ros/humble/setup.bash
+                - source ~/shibo_intern_ws/install/setup.bash
                 - cd ~/shibo_intern_ws
-                - source install/setup.bash 
-                - source /opt/ros/humble/setup.bash
-                - sleep 3
-                - ros2 bag record --storage mcap \
-                 -o colorized_map \
-                 /zed/zed_node/right/image_rect_color/uncompressed \
-                 /laser_odometry_aligned \
-                 /state_estimation_aligned \
-                 /state_estimation \
-                 /laser_odometry \
-                 /tf \
-                 /registered_scan_colorized
-          - shell_command:
-                - cd ~/dataset
-                - source /opt/ros/humble/setup.bash
-                - source install/setup.bash 
-                - sleep 3
-                - ros2 bag play humanoid_long_traj --topics /livox/lidar /livox/imu 
+                - sleep 8
+                - ros2 launch super_odometry humanoid_visualization.launch.py use_sim_time:=true
 
     - window_name: rviz
       focus: false
       layout: main-horizontal
       panes:
-          - shell_command:
+      #   - shell_command:
+      #           - cd ~/unitree_g1_rviz
+      #           - source /opt/ros/humble/setup.bash
+      #           - source ~/unitree_g1_rviz/install/setup.bash
+      #           - source ~/shibo_intern_ws/install/setup.bash
+      #           - ros2 param set /use_sim_time true
+      #           - sleep 2
+      #           - ros2 launch g1_package g1_robot.launch.xml
+        - shell_command:
                 - cd ~/shibo_intern_ws
-                - source install/setup.bash 
                 - source /opt/ros/humble/setup.bash
-                - sleep 3
+                - source ~/shibo_intern_ws/install/setup.bash
+                - source ~/unitree_g1_rviz/install/setup.bash
+                - sleep 5
                 - unset LIBGL_ALWAYS_SOFTWARE
                 - unset LIBGL_ALWAYS_INDIRECT
                 - unset MESA_LOADER_DRIVER_OVERRIDE
                 - unset MESA_GL_VERSION_OVERRIDE
                 - unset MESA_GLSL_VERSION_OVERRIDE
                 - export QT_X11_NO_MITSHM=1
-                - DRI_PRIME=1 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia rviz2 -d ros2.rviz
+                - DRI_PRIME=1 __NV_PRIME_RENDER_OFFLOAD=1 __GLX_VENDOR_LIBRARY_NAME=nvidia rviz2 -d ~/shibo_intern_ws/src/SuperOdom/super_odometry/ros2.rviz

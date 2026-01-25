@@ -168,10 +168,11 @@ namespace super_odometry {
 
     public:
         //Modify the extrinsic matrxi between laser and imu, laser and camera
-        gtsam::Pose3 imu2cam;
-        gtsam::Pose3 cam2Lidar;
-        gtsam::Pose3 imu2Lidar;
-        gtsam::Pose3 lidar2Imu;
+        gtsam::Pose3 T_i_c;
+        gtsam::Pose3 T_c_l;
+        gtsam::Pose3 T_l_c;
+        gtsam::Pose3 T_i_l;
+        gtsam::Pose3 T_l_i;
 
         // Fixed alignment from LiDAR map frame 'm' to gravity-aligned world 'w'
         Eigen::Matrix3d R_wm_ = Eigen::Matrix3d::Identity();

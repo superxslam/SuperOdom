@@ -18,6 +18,10 @@ def generate_launch_description():
         package_name="super_odometry",
         file_name="config/livox/livox_mid360_calibration.yaml"
     )
+    frame_normalizer_config = get_share_file(
+        package_name="super_odometry",
+        file_name="config/frame_normalizer.yaml"
+    )
     home_directory = os.path.expanduser("~")
     
     config_path_arg = DeclareLaunchArgument(
@@ -90,6 +94,15 @@ def generate_launch_description():
         }],
     )
 
+    frame_normalizer_node = Node(
+        package="super_odometry",
+        executable="frame_normalizer_node",
+        output={
+            "stdout": "screen",
+            "stderr": "screen",
+        },
+        parameters=[frame_normalizer_config],
+    )
 
     return LaunchDescription([
         launch_ros.actions.SetParameter(name='use_sim_time', value='false'),
@@ -103,4 +116,5 @@ def generate_launch_description():
         feature_extraction_node,
         laser_mapping_node,
         imu_preintegration_node,
+        frame_normalizer_node,
     ])

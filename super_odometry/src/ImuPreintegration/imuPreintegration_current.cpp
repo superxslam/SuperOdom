@@ -54,20 +54,8 @@ namespace super_odometry {
             ProjectName+"/state_estimation_health", 1);
         pubImuPath = this->create_publisher<nav_msgs::msg::Path>(
             ProjectName+"/imuodom_path", 1);
-        
-        // set relevant parameter (we'll override gravity direction in map after IMU init)
-        preint_params_ = gtsam::PreintegrationParams::MakeSharedU(config_.imuGravity);
-        
-        preint_params_->accelerometerCovariance =
-                gtsam::Matrix33::Identity(3, 3) * pow(config_.imuAccNoise, 2); // acc white noise in continuous
-        preint_params_->gyroscopeCovariance =
-                gtsam::Matrix33::Identity(3, 3) * pow(config_.imuGyrNoise, 2); // gyro white noise in continuous
-        preint_params_->integrationCovariance = gtsam::Matrix33::Identity(3, 3) *
-                                   pow(1e-4, 2); // error committed in integrating position from velocities
 
-        gtsam::imuBias::ConstantBias prior_imu_bias(
-                (gtsam::Vector(6) << 0, 0, 0, 0, 0, 0).finished());; // assume zero initial bias
-
+        // Initialize noise models (preintegration params will be created in initial_system after gravity is computed)
         priorPoseNoise = gtsam::noiseModel::Diagonal::Sigmas(
                 (gtsam::Vector(6) << 1e-2, 1e-2, 1e-2, 1e-2, 1e-2, 1e-2).finished()); // rad,rad,rad,m, m, m
 
@@ -81,21 +69,23 @@ namespace super_odometry {
                 << config_.imuAccBiasN,
                 config_.imuAccBiasN, config_.imuAccBiasN, config_.imuGyrBiasN, config_.imuGyrBiasN, config_.imuGyrBiasN)
                 .finished();
-        imuIntegratorImu_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(preint_params_, prior_imu_bias); // setting up the IMU integration for IMU message
-        imuIntegratorOpt_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(preint_params_, prior_imu_bias); // setting up the IMU integration for optimization
+
+        // Initialize flags
+        gravity_in_map_set_ = false;
 
         //set extrinsic matrix for laser and imu
         if (PROVIDE_IMU_LASER_EXTRINSIC) {
-            lidar2Imu = gtsam::Pose3(gtsam::Rot3(imu_laser_R), gtsam::Point3(imu_laser_T));
-            imu2Lidar = lidar2Imu.inverse();
-           
+            // imu_laser_R and imu_laser_T represent Lidar->IMU transform (T_i_l)
+            T_i_l = gtsam::Pose3(gtsam::Rot3(imu_laser_R), gtsam::Point3(imu_laser_T));
+            T_l_i = T_i_l.inverse();
+
 
         } else {
-            imu2cam = gtsam::Pose3(gtsam::Rot3(imu_camera_R), gtsam::Point3(imu_camera_T));
-            cam2Lidar = gtsam::Pose3(gtsam::Rot3(cam_laser_R), gtsam::Point3(cam_laser_T));
-            imu2Lidar = imu2cam.compose(cam2Lidar);
-            lidar2Imu = imu2Lidar.inverse();
-         
+            T_i_c = gtsam::Pose3(gtsam::Rot3(imu_camera_R), gtsam::Point3(imu_camera_T));
+            T_c_l = gtsam::Pose3(gtsam::Rot3(cam_laser_R), gtsam::Point3(cam_laser_T));
+            T_i_l = T_i_c.compose(T_c_l);
+            T_l_i = T_i_l.inverse();
+
         }
 
     }
@@ -213,25 +203,91 @@ namespace super_odometry {
     void imuPreintegration::initial_system(double currentCorrectionTime, gtsam::Pose3 lidarPose) {
         resetOptimization();
 
-    // Configure gravity in LiDAR map frame for preintegration once after IMU init
+    // Configure gravity in world frame and create preintegration params
+    // This must happen BEFORE any IMU integration
     if (!gravity_in_map_set_ && imu_init_success) {
-        Eigen::Vector3d g_b_dir = -imu_Init->acc_mean;
+        // Note: acc_mean is the measured acceleration (reaction force) when stationary
+        // Gravity direction is opposite: g = -measured_acc
+        // BUT: correctLivoxGravity() scales the measurements, so we must be consistent
+        Eigen::Vector3d acc_mean_normalized = imu_Init->acc_mean;
+        acc_mean_normalized.normalize();
+
+        // For LIVOX: measurements are scaled by (gravity_magnitude / acc_mean_norm)
+        // So the effective measurement represents gravity in the SAME direction as acc_mean
+        // Therefore: gravity direction = -acc_mean_normalized (standard convention)
+        Eigen::Vector3d g_b_dir = -acc_mean_normalized;
+
         if (g_b_dir.norm() > 1e-6) {
             g_b_dir.normalize();
-            Eigen::Matrix3d R_li = imu2Lidar.rotation().matrix(); // IMU->LiDAR
-            Eigen::Vector3d g_m_dir = (R_li * g_b_dir).normalized(); // gravity in LiDAR map frame
-            preint_params_->n_gravity = gtsam::Vector3(
-                config_.imuGravity * g_m_dir.x(),
-                config_.imuGravity * g_m_dir.y(),
-                config_.imuGravity * g_m_dir.z());
-            gravity_in_map_set_ = true;
-            RCLCPP_INFO(this->get_logger(), "Set preintegration gravity vector in LiDAR map frame: [%.3f, %.3f, %.3f]",
-                        preint_params_->n_gravity.x(), preint_params_->n_gravity.y(), preint_params_->n_gravity.z());
-                        //preint_params_->n_gravity = gtsam::Vector3(0.0, 0.0, -config_.imuGravity);
 
+            // Transform gravity from IMU body frame to world frame
+            // World frame is defined by the first lidarPose
+            // R_world_imu = R_world_lidar * R_lidar_imu
+            gtsam::Pose3 imuPoseInWorld = lidarPose.compose(T_l_i);
+            Eigen::Matrix3d R_w_i = imuPoseInWorld.rotation().matrix();
+            Eigen::Vector3d g_world_dir = (R_w_i * g_b_dir).normalized();
+
+            // Debug: Print gravity vectors at each stage
+            RCLCPP_INFO(this->get_logger(),
+                "Gravity initialization debug:");
+            RCLCPP_INFO(this->get_logger(),
+                "  IMU measured gravity (body frame): [%.3f, %.3f, %.3f], norm=%.3f",
+                g_b_dir.x(), g_b_dir.y(), g_b_dir.z(), (-imu_Init->acc_mean).norm());
+            RCLCPP_INFO(this->get_logger(),
+                "  Gravity in world frame: [%.3f, %.3f, %.3f]",
+                g_world_dir.x(), g_world_dir.y(), g_world_dir.z());
+            RCLCPP_INFO(this->get_logger(),
+                "  First lidarPose: pos=[%.3f, %.3f, %.3f]",
+                lidarPose.translation().x(), lidarPose.translation().y(), lidarPose.translation().z());
+
+            // Create preintegration parameters with correct gravity
+            preint_params_ = gtsam::PreintegrationParams::MakeSharedU(config_.imuGravity);
+            preint_params_->n_gravity = gtsam::Vector3(
+                config_.imuGravity * g_world_dir.x(),
+                config_.imuGravity * g_world_dir.y(),
+                config_.imuGravity * g_world_dir.z());
+
+            preint_params_->accelerometerCovariance =
+                gtsam::Matrix33::Identity(3, 3) * pow(config_.imuAccNoise, 2);
+            preint_params_->gyroscopeCovariance =
+                gtsam::Matrix33::Identity(3, 3) * pow(config_.imuGyrNoise, 2);
+            preint_params_->integrationCovariance =
+                gtsam::Matrix33::Identity(3, 3) * pow(1e-4, 2);
+
+            // Create IMU integrators with zero initial bias
+            // The bias will be estimated during optimization
+            gtsam::imuBias::ConstantBias prior_imu_bias;
+            imuIntegratorImu_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(
+                preint_params_, prior_imu_bias);
+            imuIntegratorOpt_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(
+                preint_params_, prior_imu_bias);
+
+            gravity_in_map_set_ = true;
+            RCLCPP_INFO(this->get_logger(),
+                "Set preintegration gravity in world frame: [%.3f, %.3f, %.3f]",
+                preint_params_->n_gravity.x(),
+                preint_params_->n_gravity.y(),
+                preint_params_->n_gravity.z());
         } else {
             RCLCPP_WARN(this->get_logger(), "IMU acc_mean too small; cannot set map gravity yet.");
+            return;
         }
+    }
+
+    // Clear accumulated IMU measurements before system initialization
+    // These measurements were collected before gravity was properly set
+    if (!systemInitialized) {
+        size_t opt_queue_size = imuQueOpt.size();
+        size_t imu_queue_size = imuQueImu.size();
+
+        RCLCPP_INFO(this->get_logger(),
+            "Clearing accumulated IMU queues before initialization: imuQueOpt=%zu, imuQueImu=%zu",
+            opt_queue_size, imu_queue_size);
+
+        imuQueOpt.clear();
+        imuQueImu.clear();
+        lastImuT_opt = -1;
+        lastImuT_imu = -1;
     }
 
         while (!imuQueOpt.empty()) {
@@ -243,7 +299,19 @@ namespace super_odometry {
                 break;
         }
 
-        prevPose_ = lidarPose.compose(lidar2Imu);
+        prevPose_ = lidarPose.compose(T_l_i);
+
+        // Debug: Print initial state
+        RCLCPP_INFO(this->get_logger(),
+            "Initial system state:");
+        RCLCPP_INFO(this->get_logger(),
+            "  Initial IMU pose: pos=[%.3f, %.3f, %.3f]",
+            prevPose_.translation().x(), prevPose_.translation().y(), prevPose_.translation().z());
+        RCLCPP_INFO(this->get_logger(),
+            "  Initial velocity: [%.3f, %.3f, %.3f]", 0.0, 0.0, 0.0);
+        RCLCPP_INFO(this->get_logger(),
+            "  Initial bias: acc=[%.3f, %.3f, %.3f], gyr=[%.3f, %.3f, %.3f]",
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0);
 
         gtsam::PriorFactor<gtsam::Pose3> priorPose(X(0), prevPose_,
                                                    priorPoseNoise);
@@ -277,12 +345,26 @@ namespace super_odometry {
         imuIntegratorImu_->resetIntegrationAndSetBias(prevBias_);
         imuIntegratorOpt_->resetIntegrationAndSetBias(prevBias_);
 
+        // CRITICAL FIX: Initialize prevStateOdom immediately after first optimization
+        // This prevents pose jumps when imuHandler() tries to use it before repropagate_imuodometry()
+        prevStateOdom = prevState_;
+        prevBiasOdom = prevBias_;
+
         key = 1;
         systemInitialized = true;
     }
 
     void imuPreintegration::integrate_imumeasurement(double currentCorrectionTime) {
+        // Safety check: ensure integrator is initialized
+        if (!imuIntegratorOpt_) {
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                "IMU integrator not initialized yet, skipping integration");
+            return;
+        }
+
         // 1. integrate imu data and optimize
+        static bool first_integration = true;
+        static int integration_count = 0;
 
         while (!imuQueOpt.empty())
         {
@@ -294,9 +376,20 @@ namespace super_odometry {
                 double dt = (lastImuT_opt < 0) ? (1.0 / 200.0) : (imuTime - lastImuT_opt);
                 lastImuT_opt = imuTime;
 
-                if(dt < 0.001 || dt > 0.5) 
+                if(dt < 0.001 || dt > 0.5)
                     dt = 0.005;
-               
+
+                // Debug: Print first few integrations
+                if (integration_count < 5) {
+                    RCLCPP_INFO(this->get_logger(),
+                        "IMU integration #%d: acc=[%.3f, %.3f, %.3f], gyr=[%.3f, %.3f, %.3f], dt=%.4f",
+                        integration_count,
+                        thisImu->linear_acceleration.x, thisImu->linear_acceleration.y, thisImu->linear_acceleration.z,
+                        thisImu->angular_velocity.x, thisImu->angular_velocity.y, thisImu->angular_velocity.z,
+                        dt);
+                    integration_count++;
+                }
+
                 imuIntegratorOpt_->integrateMeasurement(
                         gtsam::Vector3(thisImu->linear_acceleration.x, thisImu->linear_acceleration.y, thisImu->linear_acceleration.z),
                         gtsam::Vector3(thisImu->angular_velocity.x,    thisImu->angular_velocity.y,    thisImu->angular_velocity.z), dt);
@@ -315,7 +408,7 @@ namespace super_odometry {
 
         // add laser pose prior factor
 
-        gtsam::Pose3 curPose = lidarPose.compose(lidar2Imu);
+        gtsam::Pose3 curPose = lidarPose.compose(T_l_i);
 
         // insert predicted values
         gtsam::NavState propState_ =
@@ -389,6 +482,13 @@ namespace super_odometry {
     }
 
     void imuPreintegration::repropagate_imuodometry(double currentCorrectionTime) {
+        // Safety check: ensure integrator is initialized
+        if (!imuIntegratorImu_) {
+            RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 5000,
+                "IMU integrator not initialized yet, skipping repropagation");
+            return;
+        }
+
         prevStateOdom = prevState_;
         prevBiasOdom = prevBias_;
 
@@ -619,7 +719,14 @@ namespace super_odometry {
 
 
 
-    // 3. Process timing and queue management
+    // 3. Compute dt before processTiming updates lastImuT_imu
+    double imuTime = secs(&thisImu);
+    double dt = (lastImuT_imu < 0) ? (1.0 / 200.0) : (imuTime - lastImuT_imu);
+    if (dt < 0.001 || dt > 0.5) {
+        dt = 0.005;
+    }
+
+    // Process timing and queue management
     processTiming(thisImu);
 
     // 4. Early return if first optimization not done
@@ -627,9 +734,31 @@ namespace super_odometry {
         return;
     }
 
-        // 5. Prepare and publish odometry
-        // Optionally lead the prediction slightly to reduce publish delay:
-        gtsam::NavState currentState = imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);
+    // CRITICAL FIX: Safety check - ensure prevStateOdom is initialized
+    // This prevents using uninitialized state which causes pose jumps
+    if (!systemInitialized) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+            "System not initialized yet, skipping IMU odometry prediction");
+        return;
+    }
+
+    // Additional safety check: verify prevStateOdom is valid
+    if (prevStateOdom.pose().equals(gtsam::Pose3(), 1e-9)) {
+        RCLCPP_WARN_THROTTLE(this->get_logger(), *this->get_clock(), 1000,
+            "prevStateOdom not properly initialized, skipping IMU odometry prediction");
+        return;
+    }
+
+    // 5. Integrate current IMU measurement before prediction
+    // This ensures IMU odometry integrates over the full 100ms between lidar poses
+    imuIntegratorImu_->integrateMeasurement(
+        gtsam::Vector3(thisImu.linear_acceleration.x, thisImu.linear_acceleration.y, thisImu.linear_acceleration.z),
+        gtsam::Vector3(thisImu.angular_velocity.x, thisImu.angular_velocity.y, thisImu.angular_velocity.z),
+        dt);
+
+    // 6. Prepare and publish odometry
+    // Optionally lead the prediction slightly to reduce publish delay:
+    gtsam::NavState currentState = imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);
         if (config_.predict_future_secs > 0.0) {
             // Apply a small forward rotation using latest gyro (bias-compensated) assuming constant rate over lead
             const Eigen::Vector3d w_meas(thisImu.angular_velocity.x,
@@ -841,7 +970,7 @@ const sensor_msgs::msg::Imu &thisImu, const gtsam::NavState &currentState){
 
     gtsam::Rot3 imuRot(q_w_curr);
     gtsam::Pose3 imuPose = gtsam::Pose3(imuRot, currentState.position());
-    gtsam::Pose3 lidarPoseOpt = imuPose.compose(imu2Lidar);
+    gtsam::Pose3 lidarPoseOpt = imuPose.compose(T_i_l);
 
     Eigen::Vector3d velocity_w_curr(currentState.velocity().x(), currentState.velocity().y(),
                                     currentState.velocity().z());

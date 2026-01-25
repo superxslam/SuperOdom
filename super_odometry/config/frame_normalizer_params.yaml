@@ -1,0 +1,33 @@
+# Parameters for the frame_normalizer node
+# Put this file in the package's config/ folder and load it at launch or with --ros-args --params-file
+
+frame_normalizer:
+  ros__parameters:
+    # Image source
+    use_compressed_image: false
+    image_in: "/your/color/image"
+    camera_info_in: "/your/color/camera_info"
+    camera_frame: "camera_frame"
+    scan_color_out: "/registered_scan_color"
+    sync_tolerance: 0.05
+
+    # FOV / filtering options
+    filter_scan_by_fov: false
+    camera_h_fov_deg: 0.0
+    camera_v_fov_deg: 0.0
+
+    # Camera extrinsics (from camera to sensor)
+    use_static_extrinsics: true
+    cam_tx: -0.010997
+    cam_ty: -0.038107
+    cam_tz: -0.020099
+    cam_qx: -0.473078
+    cam_qy: -0.473175
+    cam_qz: -0.525554
+    cam_qw: 0.525447
+    cam_roll_deg: 0.0
+    cam_pitch_deg: 0.0
+    cam_yaw_deg: 0.0
+
+    # Optional: keep rotate_twist default here if you want to override
+    # rotate_twist: false
