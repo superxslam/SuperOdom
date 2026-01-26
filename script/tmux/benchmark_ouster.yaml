@@ -14,13 +14,13 @@ windows:
                 - DATASET_DIR=/root/data/ouster_dataset/run_05_lester-super-odom-rogers-fix-warehouse-shakeout_2025-02-06-09-07-27/extracted_ouster_data ## hange to your dataset directory here
                 - mkdir -p $DATASET_DIR/benchmark
                 - echo $DATASET_DIR > /tmp/current_dataset_dir
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
                 - ros2 launch super_odometry os0_128.launch.py
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - sleep 3
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
@@ -29,7 +29,7 @@ windows:
                 - ros2 bag play *.mcap --rate 2.0 && echo "PLAYBACK_COMPLETE" > /tmp/bag_complete 
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - sleep 2
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
@@ -39,14 +39,14 @@ windows:
                 - BENCHMARK_DIR=benchmark_ouster_$(date '+%Y-%m-%d_%H-%M-%S')
                 - mkdir -p $BENCHMARK_DIR && cd $BENCHMARK_DIR
                 - echo $BENCHMARK_DIR > /tmp/current_benchmark_dir
-                - cp ~/ros2_ws/src/SuperOdom/super_odometry/config/os0_128.yaml .  #change to sensor config file here
-                - cp ~/ros2_ws/src/SuperOdom/script/save_benchmark_result.py .
-                - cp ~/ros2_ws/src/SuperOdom/script/save_superodom_stats_matplotlib.py .
-                - cp ~/ros2_ws/src/SuperOdom/script/save_imu_vs_icp.py .
+                - cp ~/superodom_ws/src/SuperOdom/super_odometry/config/os0_128.yaml .  #change to sensor config file here
+                - cp ~/superodom_ws/src/SuperOdom/script/save_benchmark_result.py .
+                - cp ~/superodom_ws/src/SuperOdom/script/save_superodom_stats_matplotlib.py .
+                - cp ~/superodom_ws/src/SuperOdom/script/save_imu_vs_icp.py .
                 - bash -c "ros2 bag record /super_odometry_stats & RECORD_PID=$!; while [ ! -f /tmp/bag_complete ]; do sleep 1; done; kill $RECORD_PID; rm /tmp/bag_complete; echo 'Recording stopped';"
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - sleep 2
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
@@ -57,7 +57,7 @@ windows:
                 - python3 save_benchmark_result.py
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - sleep 2
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
@@ -68,7 +68,7 @@ windows:
                 - python3 save_superodom_stats_matplotlib.py
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - sleep 2
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
@@ -83,9 +83,9 @@ windows:
       panes:
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/superodom_ws
                 - source install/setup.bash 
                 - source /opt/ros/humble/setup.bash
-                - cd /root/ros2_ws/src/SuperOdom/super_odometry
+                - cd /root/superodom_ws/src/SuperOdom/super_odometry
                 - sleep 5
                 - rviz2 -d ros2.rviz

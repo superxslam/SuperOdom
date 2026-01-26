@@ -84,20 +84,20 @@
 
 First create your own local ROS2 workspace and clone `SuperOdom`: 
 ```bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
+mkdir -p ~/superodom_ws/src
+cd ~/superodom_ws/src
 git clone https://github.com/superxslam/SuperOdom
 ```
-Clone respective repos and ensure they follow this exact structure under `ros2_ws/src`:
+Clone respective repos and ensure they follow this exact structure under `superodom_ws/src`:
 
 ```
-ros2_ws/src
+superodom_ws/src
 ├── SuperOdom
 ├── livox_ros_driver2
 
 ``` 
 
- **Important**: Maintain this exact structure within `ros_ws/src`
+ **Important**: Maintain this exact structure within `superodom_ws/src`
 ### Dependencies Installation
 
 We provide a bash script which will setup the project on your host system.
@@ -105,16 +105,17 @@ We provide a bash script which will setup the project on your host system.
 
 `SuperOdom`: 
 ```bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
+mkdir -p ~/superodom_ws/src
+cd ~/superodom_ws/src
 git clone https://github.com/superxslam/SuperOdom
 cd SuperOdom
 sudo chmod +x install_deps.sh && ./install_deps.sh
-tmuxp load humanoid.yaml
-
 ```
 
-## 🐳 4. Installation with docker
+> **Note**: To launch SuperOdometry, check `script/humanoid.yaml` for detailed launch instructions.
+
+<details>
+<summary><h2>🐳 4. Installation with docker</h2></summary>
 
 ### Prerequisites
 - [Docker](https://www.docker.com/)
@@ -130,13 +131,13 @@ docker build -t superodom-ros2:latest .
 
 First create your own local ROS2 workspace and clone `SuperOdom`: 
 ```bash
-mkdir -p ~/ros2_ws/src
-cd ~/ros2_ws/src
+mkdir -p ~/superodom_ws/src
+cd ~/superodom_ws/src
 git clone https://github.com/superxslam/SuperOdom
 ```
-Clone respective repos and ensure they follow this exact structure under `ros2_ws/src`:
+Clone respective repos and ensure they follow this exact structure under `superodom_ws/src`:
 ```
-ros2_ws/src
+superodom_ws/src
 ├── SuperOdom
 ├── livox_ros_driver2
 ├──rviz_2d_overlay_plugins (optional)
@@ -146,7 +147,7 @@ You can clone `livox_ros_driver2` and `rviz_2d_overlay_plugins (optional)` using
 - [Livox-ROS-driver2](https://github.com/Livox-SDK/livox_ros_driver2)
 - [ROS2-jsk-plugin](https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins)
 
-> **Important**: Maintain this exact structure within `ros_ws/src`
+> **Important**: Maintain this exact structure within `superodom_ws/src`
 
 ### Docker Container Setup
 ```bash
@@ -160,7 +161,7 @@ to mount these directory to docker
 PROJECT_DIR="/path/to/your/superodom"   
 DATASET_DIR="/path/to/your/dataset"
 ```
-> **Important**: `PROJECT_DIR` should be the exact directory to `ros2_ws/src`
+> **Important**: `PROJECT_DIR` should be the exact directory to `superodom_ws/src`
 
 Then launch docker container using the following:
 ```bash
@@ -180,97 +181,52 @@ Build the workspace within container
 pip install empy==3.3.4
 sudo apt-get install -y python3-ament-package python-tk python3-pip
 sudo apt-get -y install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
-cd ~/ros2_ws/src/livox_ros_driver2
+cd ~/superodom_ws/src/livox_ros_driver2
 ./build.sh humble 
-cd ~/ros2_ws
+cd ~/superodom_ws
 colcon build 
 ```
 > **Important**: make sure you first build `livox_ros_driver2` 
 
 ### Launch the SLAM for humanoid robots
 
+To launch SuperOdometry, check `script/humanoid.yaml` for detailed launch instructions and configuration.
+
 ```bash
 cd script
 tmuxp load humanoid.yaml
 ```
 
+> **Note**: Make sure to modify the paths in `script/humanoid.yaml` (SUPERODOM_WS, DATASET_DIR, BAG_LIVOX, BAG_OTHER) before running.
 
-## 🚀 5. Launch SuperOdometry
+</details>
 
-To launch SuperOdometry, we provide demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)  
+<details>
+<summary><h2>🚀 5. Launch SuperOdometry</h2></summary>
 
-To convert Velodyne packet message into `sensor_msgs/PointCloud2`, you can follow this [tutorial link](https://github.com/superxslam/ICCV2023_SLAM_Challenge?tab=readme-ov-file#instructions-for-running-velodyne-driver)
+To launch SuperOdometry, please check `script/humanoid.yaml` for detailed launch instructions. The YAML file contains all the necessary configuration and commands to launch the system.
 
-For more challange dataset, feel free to download from our website [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc). You might want to convert ROS1 bag into ROS2 format using this [link](https://docs.openvins.com/dev-ros1-to-ros2.html). 
-
-For user-defined topic names, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`: 
-```bash
-imu_topic: "/your/imu/topic"
-laser_topic: "/your/laser/topic"
-```
-For user-defined laser-imu extrinsics, modify `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`: 
-```bash
-#Rotation from laser frame to imu frame, imu^R_laser
-extrinsicRotation_imu_laser: !!opencv-matrix
-  rows: 3
-  cols: 3
-  dt: d  
-  data: [1., 0., 0.,
-        0., 1., 0.,
-        0., 0., 1.]
-
-#Translation from laser frame to imu frame, imu^T_laser
-extrinsicTranslation_imu_laser: !!opencv-matrix
-  rows: 3
-  cols: 1
-  dt: d
-  data: [-0.011, -0.02329, 0.04412]
-```
-
-Run SuperOdometry using the following command: 
-
-```bash
-source install/setup.bash
-ros2 launch super_odometry livox_mid360.launch.py
-ros2 launch super_odometry os1_128.launch.py
-ros2 launch super_odometry vlp_16.launch.py
-```
-Play your ROS2 dataset:
-```bash
-# launch this in a new bash window
-docker exec --privileged -it superodom-ros2 /bin/bash
-source install/setup.bash
-cd ~/data
-ros2 bag play $(YOUR_ROS2_DATASET)
-```
-
-Visualize in RVIZ2: 
-```bash
-# launch this in a new bash window
-docker exec --privileged -it superodom-ros2 /bin/bash
-source install/setup.bash
-cd ~/ros2_ws/src/SuperOdom/super_odometry
-rviz2 -d ros2.rviz
-```
-
-(⭐ Alternative) Visualize in Rerun: 
-```bash
-# launch this in a new bash window
-docker exec --privileged -it superodom-ros2 /bin/bash
-source install/setup.bash
-cd ~/ros2_ws/src/SuperOdom/script/visualizers
-python3 rerun_visualizer.py
-# Open a new bash window on your local device
-rerun
-```
-
-We also provide tmux script for easy launch with dataset (this script only works after you build the workspace in docker): 
+**Quick Start:**
 ```bash
 cd script
 tmuxp load humanoid.yaml
 ```
 
-## 📍 Localization Mode Configuration
+> **Note**: Make sure to modify the paths in `script/humanoid.yaml` (SUPERODOM_WS, DATASET_DIR, BAG_LIVOX, BAG_OTHER) before running.
+
+For demo datasets and additional resources:
+- Demo datasets for Livox-mid360, VLP-16 and OS1-128 sensor: [Download Link](https://drive.google.com/drive/folders/1oA0kRFIH0_8oyD32IW1vZitfxYunzdBr?usp=sharing)
+- More challenge datasets: [slam_mode](https://superodometry.com/iccv23_challenge_LiI) and [localization_mode](https://superodometry.com/superloc)
+- Convert ROS1 bag to ROS2 format: [Tutorial](https://docs.openvins.com/dev-ros1-to-ros2.html)
+
+For configuration:
+- Topic names: modify `super_odometry/config/$(YOUR_LiDAR_SENSOR).yaml`
+- Laser-IMU extrinsics: modify `super_odometry/config/$(YOUR_LiDAR_SENSOR)/$(YOUR_LiDAR_SENSOR)_calibration.yaml`
+
+</details>
+
+<details>
+<summary><h2>📍 6. Localization Mode Configuration</h2></summary>
 
 https://github.com/user-attachments/assets/42cb5480-c283-4608-84be-ff12a05d09e0
 
@@ -295,7 +251,9 @@ parameters=[LaunchConfiguration("config_file"),
      "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
 }]
 ```
-To quickly launch our localization module, feel free to try out this demo [dataset](https://drive.google.com/drive/folders/1WOTj4j9t5LkKkdajFlj6bZcdmPcsJipz?usp=sharing) using default initial pose configuration. 
+To quickly launch our localization module, feel free to try out this demo [dataset](https://drive.google.com/drive/folders/1WOTj4j9t5LkKkdajFlj6bZcdmPcsJipz?usp=sharing) using default initial pose configuration.
+
+</details> 
 
 <!-- ## 📫 7. Contact
 

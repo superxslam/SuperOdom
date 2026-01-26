@@ -37,7 +37,7 @@ fi
 docker run --privileged -it \
            --runtime=nvidia \
            --gpus all \
-           --volume="$PROJECT_DIR:/root/ros2_ws/src" \
+           --volume="$PROJECT_DIR:/root/superodom_ws/src" \
            --volume="$DATASET_DIR:/root/data" \
            --volume=/tmp/.X11-unix:/tmp/.X11-unix:rw \
            --network=host \

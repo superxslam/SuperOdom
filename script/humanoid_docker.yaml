@@ -11,8 +11,8 @@ windows:
           - docker exec --privileged -it superodom-ros2 /bin/bash
           - export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
           - source /opt/ros/humble/setup.bash
-          - source ~/ros2_ws/install/setup.bash
-          - cd /root/ros2_ws/src/livox_ros_driver2 
+          - source ~/superodom_ws/install/setup.bash
+          - cd /root/superodom_ws/src/livox_ros_driver2 
           - ./build.sh humble
           - colcon build --symlink-install
           - ros2 launch super_odometry livox_humanoid.launch.py
@@ -20,7 +20,7 @@ windows:
           - sleep 5 
           - docker exec --privileged -it superodom-ros2 /bin/bash
           - source /opt/ros/humble/setup.bash
-          - source ~/ros2_ws/install/setup.bash
+          - source ~/superodom_ws/install/setup.bash
           - cd /root/data
           - ros2 bag play rosbag2_2025_08_13-04_28_59 --topics /livox/lidar /livox/imu 
   - window_name: visualization
@@ -31,8 +31,8 @@ windows:
           - docker exec --privileged -it superodom-ros2 /bin/bash
           - export LD_LIBRARY_PATH=/usr/local/lib:$LD_LIBRARY_PATH
           - source /opt/ros/humble/setup.bash
-          - source ~/ros2_ws/install/setup.bash
-          - cd /root/ros2_ws/src/SuperOdom/super_odometry
+          - source ~/superodom_ws/install/setup.bash
+          - cd /root/superodom_ws/src/SuperOdom/super_odometry
           - export LIBGL_ALWAYS_SOFTWARE=0
           - export MESA_GL_VERSION_OVERRIDE=3.3
           - export MESA_GLSL_VERSION_OVERRIDE=330
@@ -47,7 +47,7 @@ windows:
       - shell_command:
           - docker exec --privileged -it superodom-ros2 /bin/bash
           - source /opt/ros/humble/setup.bash
-          - source ~/ros2_ws/install/setup.bash
+          - source ~/superodom_ws/install/setup.bash
           - sudo apt update
           - sudo apt install ros-humble-foxglove-bridge
           - ros2 launch foxglove_bridge foxglove_bridge_launch.xml

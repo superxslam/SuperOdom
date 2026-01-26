@@ -526,7 +526,7 @@ def main():
                        help='Maximum number of points in final map')
     parser.add_argument('--save_interval', type=float, default=30.0,
                        help='Interval for saving intermediate maps (seconds)')
-    parser.add_argument('--output_dir', type=str, default='/root/ros2_ws/src/SuperOdom/script/mapping_result',
+    parser.add_argument('--output_dir', type=str, default='/root/superodom_ws/src/SuperOdom/script/mapping_result',
                        help='Directory to save output files')
     parser.add_argument('--cloud_topic', type=str, default='/registered_scan',
                        help='ROS2 topic for point cloud data')

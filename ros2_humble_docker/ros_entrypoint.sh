@@ -7,6 +7,6 @@ source "/opt/ros/humble/setup.bash"
 
 echo "==============SuperOdom ROS2 Docker Env Ready================"
 
-cd /root/ros2_ws
+cd /root/superodom_ws
 
 exec "$@"

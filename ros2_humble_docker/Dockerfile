@@ -102,7 +102,7 @@ RUN apt-get update && apt-get install -y ros-humble-ament-cmake
 RUN apt-get install -y tmuxp
 RUN sudo apt install ros-humble-foxglove-bridge
 
-WORKDIR /root/ros2_ws
+WORKDIR /root/superodom_ws
 
 # Load ROS environment at each run
 COPY ./ros_entrypoint.sh /
