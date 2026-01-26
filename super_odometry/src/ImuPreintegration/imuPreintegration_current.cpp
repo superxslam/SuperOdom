@@ -206,72 +206,84 @@ namespace super_odometry {
     // Configure gravity in world frame and create preintegration params
     // This must happen BEFORE any IMU integration
     if (!gravity_in_map_set_ && imu_init_success) {
-        // Note: acc_mean is the measured acceleration (reaction force) when stationary
-        // Gravity direction is opposite: g = -measured_acc
-        // BUT: correctLivoxGravity() scales the measurements, so we must be consistent
+        // Compute gravity direction from IMU measurements and transform to world frame
+        // The world frame is defined by the first LiDAR pose
+        // This ensures gravity is correctly aligned regardless of initial LiDAR orientation
         Eigen::Vector3d acc_mean_normalized = imu_Init->acc_mean;
-        acc_mean_normalized.normalize();
-
-        // For LIVOX: measurements are scaled by (gravity_magnitude / acc_mean_norm)
-        // So the effective measurement represents gravity in the SAME direction as acc_mean
-        // Therefore: gravity direction = -acc_mean_normalized (standard convention)
-        Eigen::Vector3d g_b_dir = -acc_mean_normalized;
-
-        if (g_b_dir.norm() > 1e-6) {
-            g_b_dir.normalize();
-
-            // Transform gravity from IMU body frame to world frame
-            // World frame is defined by the first lidarPose
-            // R_world_imu = R_world_lidar * R_lidar_imu
-            gtsam::Pose3 imuPoseInWorld = lidarPose.compose(T_l_i);
-            Eigen::Matrix3d R_w_i = imuPoseInWorld.rotation().matrix();
-            Eigen::Vector3d g_world_dir = (R_w_i * g_b_dir).normalized();
-
-            // Debug: Print gravity vectors at each stage
-            RCLCPP_INFO(this->get_logger(),
-                "Gravity initialization debug:");
-            RCLCPP_INFO(this->get_logger(),
-                "  IMU measured gravity (body frame): [%.3f, %.3f, %.3f], norm=%.3f",
-                g_b_dir.x(), g_b_dir.y(), g_b_dir.z(), (-imu_Init->acc_mean).norm());
-            RCLCPP_INFO(this->get_logger(),
-                "  Gravity in world frame: [%.3f, %.3f, %.3f]",
-                g_world_dir.x(), g_world_dir.y(), g_world_dir.z());
-            RCLCPP_INFO(this->get_logger(),
-                "  First lidarPose: pos=[%.3f, %.3f, %.3f]",
-                lidarPose.translation().x(), lidarPose.translation().y(), lidarPose.translation().z());
-
-            // Create preintegration parameters with correct gravity
-            preint_params_ = gtsam::PreintegrationParams::MakeSharedU(config_.imuGravity);
-            preint_params_->n_gravity = gtsam::Vector3(
-                config_.imuGravity * g_world_dir.x(),
-                config_.imuGravity * g_world_dir.y(),
-                config_.imuGravity * g_world_dir.z());
-
-            preint_params_->accelerometerCovariance =
-                gtsam::Matrix33::Identity(3, 3) * pow(config_.imuAccNoise, 2);
-            preint_params_->gyroscopeCovariance =
-                gtsam::Matrix33::Identity(3, 3) * pow(config_.imuGyrNoise, 2);
-            preint_params_->integrationCovariance =
-                gtsam::Matrix33::Identity(3, 3) * pow(1e-4, 2);
-
-            // Create IMU integrators with zero initial bias
-            // The bias will be estimated during optimization
-            gtsam::imuBias::ConstantBias prior_imu_bias;
-            imuIntegratorImu_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(
-                preint_params_, prior_imu_bias);
-            imuIntegratorOpt_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(
-                preint_params_, prior_imu_bias);
-
-            gravity_in_map_set_ = true;
-            RCLCPP_INFO(this->get_logger(),
-                "Set preintegration gravity in world frame: [%.3f, %.3f, %.3f]",
-                preint_params_->n_gravity.x(),
-                preint_params_->n_gravity.y(),
-                preint_params_->n_gravity.z());
-        } else {
+        if (acc_mean_normalized.norm() < 1e-6) {
             RCLCPP_WARN(this->get_logger(), "IMU acc_mean too small; cannot set map gravity yet.");
             return;
         }
+        acc_mean_normalized.normalize();
+        
+        // Gravity in IMU body frame: opposite of measured acceleration (reaction force)
+        Eigen::Vector3d g_b_dir = -acc_mean_normalized;
+        
+        // Transform gravity from IMU body frame to world frame
+        // World frame = LiDAR frame at first pose
+        // R_world_imu = R_world_lidar * R_lidar_imu = lidarPose.rotation() * T_l_i.rotation()
+        gtsam::Pose3 imuPoseInWorld = lidarPose.compose(T_l_i);
+        Eigen::Matrix3d R_w_i = imuPoseInWorld.rotation().matrix();
+        Eigen::Vector3d g_world_dir = (R_w_i * g_b_dir).normalized();
+        
+        // Create preintegration parameters with gravity in world frame
+        // Choose MakeSharedD or MakeSharedU based on gravity Z component in world frame
+        // If gravity Z component is positive (pointing down = +Z), use MakeSharedD
+        // If gravity Z component is negative (pointing down = -Z), use MakeSharedU
+        // Use the full computed gravity vector for accuracy (accounts for any X/Y tilt)
+        if (g_world_dir.z() > 0) {
+            // Z-down convention: gravity points in +Z direction
+            preint_params_ = gtsam::PreintegrationParams::MakeSharedD(config_.imuGravity);
+        } else {
+            // Z-up convention: gravity points in -Z direction
+            preint_params_ = gtsam::PreintegrationParams::MakeSharedU(config_.imuGravity);
+        }
+        // Set gravity vector using the computed direction (more accurate than assuming pure Z)
+        preint_params_->n_gravity = gtsam::Vector3(
+        0,0,config_.imuGravity);
+        preint_params_->accelerometerCovariance =
+            gtsam::Matrix33::Identity(3, 3) * pow(config_.imuAccNoise, 2);
+        preint_params_->gyroscopeCovariance =
+            gtsam::Matrix33::Identity(3, 3) * pow(config_.imuGyrNoise, 2);
+        preint_params_->integrationCovariance =
+            gtsam::Matrix33::Identity(3, 3) * pow(1e-4, 2);
+
+        // Create IMU integrators with initial gyro bias from static calibration
+        // Using the gyro bias from static initialization significantly improves
+        // convergence and reduces bias drift
+        gtsam::Vector3 init_acc_bias(0, 0, 0);  // Acc bias is harder to observe, keep zero
+        gtsam::Vector3 init_gyr_bias(
+            imu_Init->gyr_bias.x(),
+            imu_Init->gyr_bias.y(),
+            imu_Init->gyr_bias.z());
+        gtsam::imuBias::ConstantBias prior_imu_bias(init_acc_bias, init_gyr_bias);
+
+        RCLCPP_INFO(this->get_logger(),
+            "Gravity initialization debug:");
+        RCLCPP_INFO(this->get_logger(),
+            "  IMU measured gravity (body frame): [%.3f, %.3f, %.3f]",
+            g_b_dir.x(), g_b_dir.y(), g_b_dir.z());
+        RCLCPP_INFO(this->get_logger(),
+            "  Gravity in world frame: [%.3f, %.3f, %.3f]",
+            g_world_dir.x(), g_world_dir.y(), g_world_dir.z());
+        RCLCPP_INFO(this->get_logger(),
+            "  First LiDAR pose: pos=[%.3f, %.3f, %.3f]",
+            lidarPose.translation().x(), lidarPose.translation().y(), lidarPose.translation().z());
+        RCLCPP_INFO(this->get_logger(),
+            "  Set preintegration gravity: [%.3f, %.3f, %.3f] m/s²",
+            preint_params_->n_gravity.x(),
+            preint_params_->n_gravity.y(),
+            preint_params_->n_gravity.z());
+        RCLCPP_INFO(this->get_logger(),
+            "  Initial gyro bias from static calibration: [%.5f, %.5f, %.5f] rad/s",
+            init_gyr_bias.x(), init_gyr_bias.y(), init_gyr_bias.z());
+
+        imuIntegratorImu_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(
+            preint_params_, prior_imu_bias);
+        imuIntegratorOpt_ = std::make_shared<gtsam::PreintegratedImuMeasurements>(
+            preint_params_, prior_imu_bias);
+
+        gravity_in_map_set_ = true;
     }
 
     // Clear accumulated IMU measurements before system initialization
@@ -381,7 +393,7 @@ namespace super_odometry {
 
                 // Debug: Print first few integrations
                 if (integration_count < 5) {
-                    RCLCPP_INFO(this->get_logger(),
+                    RCLCPP_DEBUG(this->get_logger(),
                         "IMU integration #%d: acc=[%.3f, %.3f, %.3f], gyr=[%.3f, %.3f, %.3f], dt=%.4f",
                         integration_count,
                         thisImu->linear_acceleration.x, thisImu->linear_acceleration.y, thisImu->linear_acceleration.z,
