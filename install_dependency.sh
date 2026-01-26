@@ -85,20 +85,36 @@ else
     echo "  ✓ Ceres Solver already exists, skipping..."
 fi
 
-# Install rviz_2d_overlay_plugins
-echo "rviz_2d_overlay_plugins..."
-if [ ! -d "rviz_2d_overlay_plugins" ]; then
-    echo "  Cloning rviz_2d_overlay_plugins repository..."
-    git clone https://github.com/teamspatzenhirn/rviz_2d_overlay_plugins.git
-    echo "  ✓rviz_2d_overlay_plugins downloaded successfully"
+# Install Livox SDK2
+echo "Installing Livox SDK2..."
+if [ ! -d "Livox-SDK2" ]; then
+    echo "  Cloning Livox SDK2 repository..."
+    git clone https://github.com/Livox-SDK/Livox-SDK2.git
+    cd Livox-SDK2
+    mkdir -p build && cd build
+    echo "  Building Livox SDK2..."
+    cmake ..
+    make -j$(nproc)
+    echo "  Installing Livox SDK2..."
+    sudo make install
+    cd "$DEPS_DIR"
+    echo "  ✓ Livox SDK2 installed successfully"
 else
-    echo "  ✓ rviz_2d_overlay_plugins already exists, skipping..."
+    echo "  ✓ Livox SDK2 already exists, skipping..."
 fi
 
-# Install Python packages
-echo "Installing Python packages..."
-pip3 install --user rerun-sdk
-echo "  ✓ Rerun SDK installed successfully"
+# Install Livox ROS2 Driver
+echo "Installing Livox ROS2 Driver..."
+if [ ! -d "livox_ros_driver2" ]; then
+    echo "  Cloning Livox ROS2 Driver repository..."
+    git clone https://github.com/Livox-SDK/livox_ros_driver2.git
+    cd livox_ros_driver2
+    echo "  ✓ Livox ROS2 Driver downloaded successfully"
+    echo "  Note: Build this package with colcon in your ROS2 workspace"
+    cd "$DEPS_DIR"
+else
+    echo "  ✓ Livox ROS2 Driver already exists, skipping..."
+fi
 
 # Update library cache
 echo "Updating library cache..."

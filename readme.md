@@ -110,6 +110,7 @@ cd ~/ros2_ws/src
 git clone https://github.com/superxslam/SuperOdom
 cd SuperOdom
 sudo chmod +x install_deps.sh && ./install_deps.sh
+tmuxp load humanoid.yaml
 
 ```
 
@@ -322,7 +323,7 @@ To quickly launch our localization module, feel free to try out this demo [datas
 }
 ```
 
-## 9. Next Plan
+## 9. Next Planrgb
 🔵 Colorized Point Cloud Visualization — [Video Demo](https://www.youtube.com/watch?v=r7nLDGrz4gE)
 
 🟢 Visual Odometry Module — Initial Release

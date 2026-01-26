@@ -8,7 +8,6 @@ Panels:
         - /Status1
         - /Origin1
         - /LaserOdomPath1/Topic1
-        - /IMUOdomPath1/Status1
         - /Gravity_Aligned_IMU_Odom1
         - /IMUOdometry1/Shape1
         - /Gravity_RegisteredScan1
@@ -279,11 +278,11 @@ Visualization Manager:
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 255; 255
       Color Transformer: Intensity
-      Decay Time: 100
+      Decay Time: 10
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 255
+      Max Intensity: 173
       Min Color: 0; 0; 0
       Min Intensity: 0
       Name: Gravity_RegisteredScan
@@ -444,7 +443,7 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 18.17578125
+      Distance: 19.583694458007812
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
@@ -459,10 +458,10 @@ Visualization Manager:
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.8397967219352722
+      Pitch: 0.9447962641716003
       Target Frame: map
       Value: Orbit (rviz_default_plugins)
-      Yaw: 3.6421878337860107
+      Yaw: 3.7158186435699463
     Saved: ~
 Window Geometry:
   Displays:
@@ -482,5 +481,5 @@ Window Geometry:
   Views:
     collapsed: true
   Width: 1850
-  X: 70
-  Y: 27
+  X: 1184
+  Y: 1467
