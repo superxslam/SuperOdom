@@ -129,10 +129,7 @@ echo ""
 echo "========================================="
 echo "✓ All SuperOdometry dependencies installed successfully!"
 echo "========================================="
-echo ""echo "Installing Livox ROS2 Driver..."
-if [ ! -d "livox_ros_driver2" ]; then
-    echo "  Cloning Livox ROS2 Driver repository..."
-    git c
+echo ""
 echo "Dependencies installed in: $DEPS_DIR"
 echo ""
 echo "Please follow instructions to install livox_ros2_driver"
