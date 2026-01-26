@@ -108,8 +108,9 @@ We provide a bash script which will setup the project on your host system.
 mkdir -p ~/superodom_ws/src
 cd ~/superodom_ws/src
 git clone https://github.com/superxslam/SuperOdom
+git checkout dev/humanoid_mid360
 cd SuperOdom
-sudo chmod +x install_deps.sh && ./install_deps.sh
+sudo chmod +x install_dependency.sh && ./install_dependency.sh
 ```
 
 > **Note**: To launch SuperOdometry, check `script/humanoid.yaml` for detailed launch instructions.

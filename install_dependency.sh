@@ -104,16 +104,21 @@ else
 fi
 
 # Install Livox ROS2 Driver
-echo "Installing Livox ROS2 Driver..."
+# Determine workspace src directory (one level up from SuperOdom directory)
+WORKSPACE_SRC_DIR="$SCRIPT_DIR/../src"
+mkdir -p "$WORKSPACE_SRC_DIR"
+cd "$WORKSPACE_SRC_DIR"
+
 if [ ! -d "livox_ros_driver2" ]; then
     echo "  Cloning Livox ROS2 Driver repository..."
     git clone https://github.com/Livox-SDK/livox_ros_driver2.git
     cd livox_ros_driver2
     echo "  ✓ Livox ROS2 Driver downloaded successfully"
     echo "  Note: Build this package with colcon in your ROS2 workspace"
-    cd "$DEPS_DIR"
+    ./build.sh humble
+    echo "  ✓ Livox ROS2 Driver installed in workspace src directory"
 else
-    echo "  ✓ Livox ROS2 Driver already exists, skipping..."
+    echo "  ✓ Livox ROS2 Driver already exists in workspace src, skipping..."
 fi
 
 # Update library cache
@@ -124,7 +129,10 @@ echo ""
 echo "========================================="
 echo "✓ All SuperOdometry dependencies installed successfully!"
 echo "========================================="
-echo ""
+echo ""echo "Installing Livox ROS2 Driver..."
+if [ ! -d "livox_ros_driver2" ]; then
+    echo "  Cloning Livox ROS2 Driver repository..."
+    git c
 echo "Dependencies installed in: $DEPS_DIR"
 echo ""
 echo "Please follow instructions to install livox_ros2_driver"
