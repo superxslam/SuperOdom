@@ -114,6 +114,7 @@ if [ ! -d "livox_ros_driver2" ]; then
     cd livox_ros_driver2
     echo "  ✓ Livox ROS2 Driver downloaded successfully"
     echo "  Note: Build this package with colcon in your ROS2 workspace"
+    source /opt/ros/humble/setup.bash
     ./build.sh humble
     echo "  ✓ Livox ROS2 Driver installed in workspace src directory"
 else
