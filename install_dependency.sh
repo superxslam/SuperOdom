@@ -105,8 +105,7 @@ fi
 
 # Install Livox ROS2 Driver
 # Determine workspace src directory (one level up from SuperOdom directory)
-WORKSPACE_SRC_DIR="$SCRIPT_DIR/../src"
-mkdir -p "$WORKSPACE_SRC_DIR"
+WORKSPACE_SRC_DIR="$SCRIPT_DIR/.."
 cd "$WORKSPACE_SRC_DIR"
 
 if [ ! -d "livox_ros_driver2" ]; then
