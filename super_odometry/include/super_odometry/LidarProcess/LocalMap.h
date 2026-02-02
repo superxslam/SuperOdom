@@ -156,9 +156,18 @@ public:
         if(t_w_cur.z() + halfVoxelResulation < 0)
             centerCubeK--;
 
-        origin_.x() = -centerCubeI;
-        origin_.y() = -centerCubeJ;
-        origin_.z() = -centerCubeK;
+        if(localization_mode_) {
+            // For localization: center the grid around the init position
+            // so that init position maps to the CENTER of the grid
+            origin_.x() = laserCloudWidth / 2 - centerCubeI;
+            origin_.y() = laserCloudHeight / 2 - centerCubeJ;
+            origin_.z() = laserCloudDepth / 2 - centerCubeK;
+        } else {
+            // For SLAM: original behavior
+            origin_.x() = -centerCubeI;
+            origin_.y() = -centerCubeJ;
+            origin_.z() = -centerCubeK;
+        }
 
         return origin_;
     }  // function setOrigin end
@@ -179,6 +188,12 @@ public:
             centerCubeJ--;
         if(t_w_cur.z() + halfVoxelResulation < 0)
             centerCubeK--;
+
+        // In localization mode, DO NOT shift the map - keep GT map static
+        // Just return the current position in the grid
+        if(localization_mode_) {
+            return Eigen::Vector3i{centerCubeI, centerCubeJ, centerCubeK};
+        }
 
         while(centerCubeI < 3) {
             for(int j = 0; j < laserCloudHeight; j++) {
@@ -761,6 +776,9 @@ public:
     float planeRes_ = 0.4;
 
     Eigen::Vector3i origin_;
+    
+    // For localization mode: don't shift the map, keep GT map static
+    bool localization_mode_ = false;
 };
 
 #endif  // LOCALMAPOCTREE_H

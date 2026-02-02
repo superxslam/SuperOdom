@@ -4,6 +4,9 @@ session_name: SuperOdom_ROS2
 
 suppress_history: false
 
+options:
+    mouse: on
+
 before_script: docker start superodom-ros2
 
 windows:
@@ -37,3 +40,4 @@ windows:
                 - cd /root/ros2_ws/src/SuperOdom/super_odometry
                 - sleep 3
                 - rviz2 -d ros2.rviz
+

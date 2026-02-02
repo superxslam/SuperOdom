@@ -157,12 +157,13 @@ namespace super_odometry {
 
         imu_odom_buf.allocate(5000);
         visual_odom_buf.allocate(5000);
-        
-        slam.localMap.setOrigin(Eigen::Vector3d(slam.init_x, slam.init_y, slam.init_z));
 
         if (slam.localization_mode) {
             RCLCPP_INFO(this->get_logger(), "\033[1;32m Loading GT Map now.... Please wait for 10 sec before running rosbag.\033[0m");
             if(utils::readPointCloud(config_.map_dir, laserCloudPrior)) {
+                // Set localization mode BEFORE setOrigin so origin is computed correctly
+                slam.localMap.localization_mode_ = true;
+                slam.localMap.setOrigin(Eigen::Vector3d(slam.init_x, slam.init_y, slam.init_z));
                 slam.localMap.addSurfPointCloud(*laserCloudPrior);
                 pcl::toROSMsg(*laserCloudPrior, priorCloudMsg);
                 priorCloudMsg.header.frame_id = WORLD_FRAME;
@@ -172,6 +173,7 @@ namespace super_odometry {
                 RCLCPP_INFO(this->get_logger(), "\033[1;32mCannot read map file, switch to mapping mode.\033[0m");
             }
         } else {
+            slam.localMap.setOrigin(Eigen::Vector3d(slam.init_x, slam.init_y, slam.init_z));
             RCLCPP_INFO(this->get_logger(), "\033[1;32mStart SLAM in mapping mode.\033[0m");
         }
     }

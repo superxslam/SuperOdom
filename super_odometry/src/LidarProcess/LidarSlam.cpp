@@ -70,11 +70,13 @@ namespace super_odometry {
             world_cloud->push_back(utils::TransformPointd(p,T_w_lidar));
          }
 
-         //Add to local map 
-         if(is_edge){
-            localMap.addEdgePointCloud(*world_cloud);
-         }else{
-            localMap.addSurfPointCloud(*world_cloud);
+         //Add to local map (skip if in localization mode)
+         if(localization_mode == 0){
+            if(is_edge){
+               localMap.addEdgePointCloud(*world_cloud);
+            }else{
+               localMap.addSurfPointCloud(*world_cloud);
+            }
          }
 
          // Save world cloud to .ply file
