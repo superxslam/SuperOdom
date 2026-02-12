@@ -15,3 +15,6 @@ __pycache__
 *.pyw
 *.pyz
 *.pywz
+ros2_humble_docker/container_run.sh
+script/run.yaml
+super_odometry/launch/livox_mid360.launch.py

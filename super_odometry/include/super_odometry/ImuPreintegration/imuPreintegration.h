@@ -54,6 +54,8 @@ namespace super_odometry {
         float lidar_correction_noise;
         float smooth_factor;
         bool  use_imu_roll_pitch;
+        bool  use_imu_init;       // Publish IMU odom/TF only for imu_init_duration, then stop (laser-only TF)
+        double imu_init_duration; // Seconds
         SensorType sensor;
 
         double imu_acc_x_limit;
@@ -196,6 +198,7 @@ namespace super_odometry {
         int key = 1;
         int imuPreintegrationResetId = 0;
         int frame_count = 0;
+        double imu_init_start_time_ = -1.0;  // First publish time when use_imu_init; used to gate 1s window
 
         enum IMU_STATE : uint8_t {
         FAIL=0,    //lose imu information 

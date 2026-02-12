@@ -19,12 +19,11 @@ fi
 # Assign the arguments to variables for clarity
 CONTAINER_NAME="$1"
 IMAGE_NAME="$2"
-PROJECT_DIR="/path/to/your/superodom"
-DATASET_DIR="/path/to/your/dataset"
+PROJECT_DIR="/home/unitree/avant-moblity-ws/autonomy_stack_go2/src"
+DATASET_DIR="/home/unitree/dataset"
 
 # Launch the nvidia-docker container with the provided image name and tag
 docker run --privileged -it \
-            --gpus all \
            -e NVIDIA_DRIVER_CAPABILITIES=all \
            -e NVIDIA_VISIBLE_DEVICES=all \
            --volume="$PROJECT_DIR:/root/ros2_ws/src" \
@@ -35,5 +34,6 @@ docker run --privileged -it \
            --shm-size=4gb \
            --name="$CONTAINER_NAME" \
            --env="DISPLAY=$DISPLAY" \
+           --volume=/dev/input:/dev/input:rw \
            --rm \
            "$IMAGE_NAME" /bin/bash

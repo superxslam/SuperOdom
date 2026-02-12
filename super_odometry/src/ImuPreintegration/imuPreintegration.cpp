@@ -110,6 +110,8 @@ namespace super_odometry {
         this->declare_parameter<double>("imu_preintegration_node.imu_acc_x_limit", 1.0);
         this->declare_parameter<double>("imu_preintegration_node.imu_acc_y_limit", 1.0);
         this->declare_parameter<double>("imu_preintegration_node.imu_acc_z_limit", 1.0);
+        this->declare_parameter<bool>("imu_preintegration_node.use_imu_init", false);
+        this->declare_parameter<double>("imu_preintegration_node.imu_init_duration", 1.0);
 
         config_.imuAccNoise = this->get_parameter("imu_preintegration_node.acc_n").as_double();
         config_.imuAccBiasN = this->get_parameter("imu_preintegration_node.acc_w").as_double();
@@ -126,6 +128,8 @@ namespace super_odometry {
         config_.imu_acc_x_limit = IMU_ACC_X_LIMIT;
         config_.imu_acc_y_limit = IMU_ACC_Y_LIMIT;
         config_.imu_acc_z_limit = IMU_ACC_Z_LIMIT;
+        config_.use_imu_init = this->get_parameter("imu_preintegration_node.use_imu_init").as_bool();
+        config_.imu_init_duration = this->get_parameter("imu_preintegration_node.imu_init_duration").as_double();
 
         if (SENSOR == "livox") {
             config_.sensor = SensorType::LIVOX;
@@ -561,7 +565,13 @@ namespace super_odometry {
         return;
     }
 
-    // 5. Prepare and publish odometry
+    // 5. Prepare and publish odometry (when use_imu_init, only for first imu_init_duration seconds)
+    double t = secs(&thisImu);
+    if (config_.use_imu_init) {
+        if (imu_init_start_time_ < 0.0) imu_init_start_time_ = t;
+        if (t - imu_init_start_time_ > config_.imu_init_duration)
+            return;  // After init window: stop publishing IMU odom/TF so laser_odometry is the only source
+    }
     gtsam::NavState currentState =imuIntegratorImu_->predict(prevStateOdom, prevBiasOdom);
     nav_msgs::msg::Odometry odometry;
     publishOdometry(thisImu, currentState, odometry);

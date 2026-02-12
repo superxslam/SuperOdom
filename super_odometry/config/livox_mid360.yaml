@@ -1,7 +1,7 @@
 /**:
   ros__parameters:
-    imu_topic: "/imu/data"
-    laser_topic: "/lidar/scan"
+    imu_topic: "/livox/imu"
+    laser_topic: "/livox/lidar"
     sensor: "livox"
     use_imu_roll_pitch: false
     save_ply: false   # This can affect real-time performance; make sure you have enough memory for saving point cloud
@@ -40,6 +40,8 @@
 
     # IMU Preintegration Params
     imu_preintegration_node:
+        use_imu_init: true      # Publish IMU odom/TF only for imu_init_duration (for map init), then laser-only
+        imu_init_duration: 1.0  # Seconds
         lidar_correction_noise: 0.01
         
         acc_n: 3.9939570888238808e-03          # accelerometer measurement noise standard deviation. #0.2

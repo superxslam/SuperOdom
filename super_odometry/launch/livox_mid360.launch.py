@@ -71,7 +71,7 @@ def generate_launch_description():
         },
         parameters=[LaunchConfiguration("config_file"),
             { "calibration_file": LaunchConfiguration("calibration_file"),
-             "map_dir": os.path.join(home_directory, "/path/to/your/pcd"),
+             "map_dir": os.path.join(home_directory, "/root/data/avant-mobilty/01-28-2026/cic-01-28-lidar-sor-ds-005.pcd"),
         }],
         remappings=[
             ("laser_odom_to_init", LaunchConfiguration("odom_topic")),

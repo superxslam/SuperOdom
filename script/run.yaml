@@ -4,6 +4,9 @@ session_name: SuperOdom_ROS2
 
 suppress_history: false
 
+options:
+    mouse: on
+
 before_script: docker start superodom-ros2
 
 windows:
@@ -13,10 +16,10 @@ windows:
       panes:
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/ros2_ws/src
                 - source /opt/ros/humble/setup.bash
                 - source install/setup.bash 
-                - ros2 launch super_odometry livox_mid360.launch.py 
+                # - ros2 launch super_odometry livox_mid360.launch.py 
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
                 - cd ~/ros2_ws
@@ -25,15 +28,30 @@ windows:
                 - cd /root/data/
                 - sleep 3
 
-    - window_name: rviz
+    # - window_name: rviz
+    #   focus: false
+    #   layout: main-horizontal
+    #   panes:
+    #       - shell_command:
+    #             - docker exec --privileged -it superodom-ros2 /bin/bash
+    #             - cd ~/ros2_ws
+    #             - source install/setup.bash 
+    #             - source /opt/ros/humble/setup.bash
+    #             - cd /root/ros2_ws/src/SuperOdom/super_odometry
+    #             - sleep 3
+    #             - rviz2 -d ros2.rviz
+    - window_name: driver
       focus: false
       layout: main-horizontal
       panes:
           - shell_command:
                 - docker exec --privileged -it superodom-ros2 /bin/bash
-                - cd ~/ros2_ws
+                - cd ~/ros2_ws/src
                 - source install/setup.bash 
                 - source /opt/ros/humble/setup.bash
-                - cd /root/ros2_ws/src/SuperOdom/super_odometry
-                - sleep 3
-                - rviz2 -d ros2.rviz
+                - ros2 launch livox_ros_driver2 msg_MID360_launch.py
+
+
+# colcon build --cmake-args -DROS_EDITION=ROS2 -DHUMBLE_ROS=humble --packages-select livox_ros_driver2
+# export CYCLONEDDS_HOME=~/ros2_ws/src/cyclonedds/install
+

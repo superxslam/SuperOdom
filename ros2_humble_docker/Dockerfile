@@ -1,7 +1,7 @@
 # Author: TaeYoung Kim
 # email: tyoung96@yonsei.ac.kr
 
-FROM osrf/ros:humble-desktop-full
+FROM arm64v8/ros:humble-ros-base
 
 ENV NVIDIA_VISIBLE_DEVICES \
     ${NVIDIA_VISIBLE_DEVICES:-all}
@@ -47,8 +47,10 @@ RUN apt-get install -y python-tk python3-pip
 
 # Python 3.
 RUN pip3 install --upgrade pip
+RUN pip3 install --no-cache-dir setuptools
 RUN pip3 install --no-cache-dir numpy scipy matplotlib ipython opencv-python 
-RUN pip3 install --no-cache-dir pandas visdom scikit-image scikit-learn numba Pillow
+RUN pip3 install --no-cache-dir pandas scikit-image scikit-learn numba Pillow
+RUN pip3 install --no-build-isolation --no-cache-dir visdom
 RUN pip3 install --no-cache-dir pyyaml pycryptodome bagpy Cython
 
 RUN apt-get -y install python3-rosdep python3-rosinstall python3-rosinstall-generator python3-wstool build-essential
@@ -56,6 +58,8 @@ RUN apt-get -y install python3-rosdep python3-rosinstall python3-rosinstall-gene
 RUN rosdep update
 RUN pip3 install -U catkin_tools gym
 RUN apt-get -y install ros-humble-grid-map-msgs ros-humble-grid-map
+
+RUN apt-get update && apt-get install -y libusb-dev ros-humble-perception-pcl ros-humble-sensor-msgs-py ros-humble-tf-transformations ros-humble-joy ros-humble-rmw-cyclonedds-cpp ros-humble-rosidl-generator-dds-idl python3-colcon-common-extensions python-is-python3
 
 # Install livox SDK
 WORKDIR /root/
@@ -90,6 +94,23 @@ RUN pip install numpy==1.24.3 matplotlib==3.7.1
 RUN pip install --upgrade packaging
 RUN pip3 install torch --ignore-installed
 
+RUN pip install transforms3d pyyaml
+
+# CycloneDDS (C library) for unitree_sdk2_python
+WORKDIR /root
+RUN git clone https://github.com/eclipse-cyclonedds/cyclonedds -b releases/0.10.x \
+    && cd cyclonedds && mkdir -p build install && cd build \
+    && cmake .. -DCMAKE_INSTALL_PREFIX=../install \
+    && cmake --build . --target install
+ENV CYCLONEDDS_HOME=/root/cyclonedds/install
+ENV LD_LIBRARY_PATH=${CYCLONEDDS_HOME}/lib:${LD_LIBRARY_PATH}
+
+# cyclonedds Python bindings (requires C library above)
+RUN pip3 install --no-build-isolation cyclonedds==0.10.2
+
+# Unitree SDK2 Python (for sport_bridge -> Go2)
+RUN git clone https://github.com/unitreerobotics/unitree_sdk2_python.git /root/unitree_sdk2_python \
+    && cd /root/unitree_sdk2_python && pip3 install -e .
 
 WORKDIR /root/ros2_ws
 
