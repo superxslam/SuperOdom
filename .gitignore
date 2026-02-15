@@ -3,6 +3,7 @@
 ./vins_estimator/camke-build-debug
 ./vins_estimator/camke-build-release
 ./super_odometry/camke-build-debug
+./super_odometry/config/*.yaml
 *.idea
 *.vscode
 ./build
@@ -15,3 +16,4 @@ __pycache__
 *.pyw
 *.pyz
 *.pywz
+*.sh
