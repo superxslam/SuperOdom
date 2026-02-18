@@ -53,7 +53,11 @@ namespace super_odometry {
     void LidarSLAM::initializeState(bool initialization, const Transformd&position){
         T_w_lidar=position;
         T_w_initial_guess=position;
-        last_T_w_lidar=T_w_lidar;
+        // Keep `last_T_w_lidar` as the previous *accepted* pose for motion checks/statistics.
+        // Only initialize it on the very first frame.
+        if (!initialization) {
+            last_T_w_lidar = T_w_lidar;
+        }
     }
     
 
@@ -160,11 +164,15 @@ namespace super_odometry {
         updateOptimizationStats(t_opt, stats);
         
         // Check motion thresholds and update map
-        if (checkMotionThresholds(timeLaserOdometry, stats)) {
+        const bool accept = checkMotionThresholds(timeLaserOdometry, stats);
+        if (accept) {
             // Transform and add new features to map
             transformAndAddToMap(EdgesPoints, WorldEdgesPoints, true);
             transformAndAddToMap(PlanarsPoints, WorldPlanarsPoints, false);
         }
+
+        // Update last pose for next frame (if scan was rejected, T_w_lidar has been reverted already)
+        last_T_w_lidar = T_w_lidar;
         
         // Update timing
         lasttimeLaserOdometry = timeLaserOdometry;
@@ -174,13 +182,21 @@ namespace super_odometry {
     
         bool acceptResult = true;
         double delta_t = timeLaserOdometry - lasttimeLaserOdometry;
+
+        // Guard against invalid timestamps; if we can't estimate velocity robustly, accept the update.
+        if (delta_t <= 1e-6) {
+            return true;
+        }
         
         // Check velocity threshold
-        if (stats.translation_from_last/delta_t > OptSet.velocity_failure_threshold) {
+        const double velocity = stats.translation_from_last / delta_t;
+        if (velocity > OptSet.velocity_failure_threshold) {
             T_w_lidar = last_T_w_lidar;
             startupCount = 5;
             acceptResult = false;
-            RCLCPP_WARN(node_->get_logger(), "large motion detected, ignoring predictor for a while");
+            RCLCPP_WARN(node_->get_logger(),
+                        "Large motion detected (|dp|=%.3f m, dt=%.3f s, v=%.3f m/s > %.3f). Rejecting scan.",
+                        stats.translation_from_last, delta_t, velocity, OptSet.velocity_failure_threshold);
         }
         
         // Check small motion threshold
@@ -190,8 +206,7 @@ namespace super_odometry {
             RCLCPP_WARN_THROTTLE(node_->get_logger(), *node_->get_clock(), 1000,
                                 "very small motion, not accumulating. %f", stats.translation_from_last);
         }
-    acceptResult = true;
-    return acceptResult;
+        return acceptResult;
 }
 
 
@@ -206,7 +221,15 @@ namespace super_odometry {
 
         stats.translation_from_last = diff_from_last_T.pos.norm();
         stats.rotation_from_last = 2 * atan2(diff_from_last_T.rot.vec().norm(), diff_from_last_T.rot.w());
-        last_T_w_lidar=T_w_lidar;
+
+        // Plane correspondence / rejection breakdown (from the last ICP iteration).
+        stats.plane_match_success = MatchRejectionHistogramPlane[MatchingResult::SUCCESS].load();
+        stats.plane_no_enough_neighbor = MatchRejectionHistogramPlane[MatchingResult::NOT_ENOUGH_NEIGHBORS].load();
+        stats.plane_neighbor_too_far = MatchRejectionHistogramPlane[MatchingResult::NEIGHBORS_TOO_FAR].load();
+        stats.plane_badpca_structure = MatchRejectionHistogramPlane[MatchingResult::BAD_PCA_STRUCTURE].load();
+        stats.plane_invalid_numerical = MatchRejectionHistogramPlane[MatchingResult::INVAVLID_NUMERICAL].load();
+        stats.plane_mse_too_large = MatchRejectionHistogramPlane[MatchingResult::MSE_TOO_LARGE].load();
+        stats.plane_unknown = MatchRejectionHistogramPlane[MatchingResult::UNKNON].load();
     }
 
 
