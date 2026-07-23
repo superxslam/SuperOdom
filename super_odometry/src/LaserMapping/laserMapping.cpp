@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Shibo Zhao. All rights reserved.
+// Contact: shibowing@gmail.com; shiboz@andrew.cmu.edu
+
 //
 // Created by shiboz on 2021-10-18.
 //

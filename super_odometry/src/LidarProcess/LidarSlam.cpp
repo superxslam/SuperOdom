@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Shibo Zhao. All rights reserved.
+// Contact: shibowing@gmail.com; shiboz@andrew.cmu.edu
+
 
 // LOCAL
 #include "super_odometry/LidarProcess/LidarSlam.h"

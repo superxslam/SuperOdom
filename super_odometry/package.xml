@@ -13,7 +13,7 @@
 
   <maintainer email="shibowing@gmail.com">Shibo Zhao</maintainer>
 
-  <license>BSD</license>
+  <license>GPL-3.0-only</license>
  
   <buildtool_depend>amend_cmake</buildtool_depend>
 

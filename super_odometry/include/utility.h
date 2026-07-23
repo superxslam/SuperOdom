@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Shibo Zhao. All rights reserved.
+// Contact: shibowing@gmail.com; shiboz@andrew.cmu.edu
+
 #pragma once
 #ifndef _UTILITY_LIDAR_ODOMETRY_H_
 #define _UTILITY_LIDAR_ODOMETRY_H_

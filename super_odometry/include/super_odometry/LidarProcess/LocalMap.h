@@ -1,3 +1,6 @@
+// Copyright (C) 2026 Shibo Zhao. All rights reserved.
+// Contact: shibowing@gmail.com; shiboz@andrew.cmu.edu
+
 //
 // Created by ubuntu on 2020/6/27.
 //

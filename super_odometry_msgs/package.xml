@@ -5,7 +5,7 @@
   <version>0.0.0</version>
   <description>The super_odometry_msgs package</description>
   <maintainer email="shibowing@gmail.com">Shibo Zhao</maintainer>
-  <license>TODO</license>
+  <license>GPL-3.0-only</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
 

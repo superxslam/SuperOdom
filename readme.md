@@ -327,7 +327,14 @@ Lightweight and robust visual odometry module integrated into SuperOdometry.
 
 ## 📝 10. License
 
-This package is released under the GPLv3 license. For commercial use, please contact shiboz@andrew.cmu.edu and Prof. Sebastian Scherer.
+SuperOdom is available under a dual-license model:
+
+- The [GNU General Public License v3.0](./LICENSE) (`GPL-3.0-only`)
+- An alternative commercial license for proprietary use or other terms
+  outside the GPL
+
+The GPL permits commercial use when its terms are followed. For commercial
+licensing inquiries, contact [shibowing@gmail.com](mailto:shibowing@gmail.com, shiboz@andrew.cmu.edu).
 
 ## 🙏 11. Acknowledgements
 
