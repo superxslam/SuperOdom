@@ -49,9 +49,27 @@ find_package(Sophus REQUIRED)
 find_package(PCL REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(Ceres REQUIRED)
-find_package(GTSAM REQUIRED QUIET)
 find_package(TBB REQUIRED)
 find_package(livox_ros_driver2 REQUIRED)
+
+# GTSAM and gtsam_unstable configuration
+find_package(GTSAM REQUIRED)
+
+# Check if gtsam_unstable is available
+find_library(GTSAM_UNSTABLE_LIBRARY 
+  NAMES gtsam_unstable
+  HINTS ${GTSAM_LIBRARY_DIRS} /usr/local/lib /usr/lib
+)
+
+if(GTSAM_UNSTABLE_LIBRARY)
+  message(STATUS "Found gtsam_unstable: ${GTSAM_UNSTABLE_LIBRARY}")
+  set(GTSAM_LIBRARIES gtsam gtsam_unstable)
+  add_definitions(-DGTSAM_UNSTABLE_AVAILABLE)
+else()
+  message(WARNING "gtsam_unstable not found. Fixed-Lag Smoother will not be available.")
+  message(WARNING "To enable Fixed-Lag Smoother, rebuild GTSAM with -DGTSAM_BUILD_UNSTABLE=ON")
+  set(GTSAM_LIBRARIES gtsam)
+endif()
 
 # Include directories
 include_directories(
@@ -68,19 +86,15 @@ include_directories(
 
 # Link directories
 link_directories(
-  include
   ${PCL_LIBRARY_DIRS}
   ${OpenCV_LIBRARY_DIRS}
   ${GTSAM_LIBRARY_DIRS}
 )
 
-set(GTSAM_LIBRARIES gtsam)
-
-
 # SuperOdom Library
 add_library(SuperOdomLib SHARED
   src/FeatureExtraction/featureExtraction.cpp
-  src/ImuPreintegration/imuPreintegration.cpp
+  src/ImuPreintegration/imuPreintegration_relative.cpp
   src/LaserMapping/laserMapping.cpp
   src/LaserMapping/lidarOptimization.cpp
   src/LaserMapping/LocalMap.cpp
@@ -93,9 +107,14 @@ add_library(SuperOdomLib SHARED
 
 # Set up library include directory
 target_include_directories(SuperOdomLib PUBLIC  
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include/SuperOdomLib>  
-    $<INSTALL_INTERFACE:include/SuperOdomLib>  # <prefix>/include/mylib
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>  
+    $<INSTALL_INTERFACE:include>
 )
+
+# Add compile definitions for configuration
+if(GTSAM_UNSTABLE_LIBRARY)
+  target_compile_definitions(SuperOdomLib PUBLIC GTSAM_UNSTABLE_AVAILABLE)
+endif()
 
 ament_target_dependencies(SuperOdomLib
   rclcpp
@@ -116,38 +135,58 @@ ament_target_dependencies(SuperOdomLib
 target_link_libraries(SuperOdomLib
   ${PCL_LIBRARIES}
   ${OpenCV_LIBRARIES}
-  gtsam
- ${CERES_LIBRARIES}
+  ${GTSAM_LIBRARIES}
+  ${CERES_LIBRARIES}
+  ${TBB_LIBRARIES}
+  pthread
 )
 
 # IMU PreIntegration node
 add_executable(imu_preintegration_node src/imuPreintegration_node.cpp)
-ament_target_dependencies(imu_preintegration_node rclcpp nav_msgs sensor_msgs tf2_ros)
-target_link_libraries(imu_preintegration_node
-    gtsam
-    SuperOdomLib
+ament_target_dependencies(imu_preintegration_node 
+  rclcpp 
+  nav_msgs 
+  sensor_msgs 
+  tf2_ros
+  std_msgs
 )
-
-
+target_link_libraries(imu_preintegration_node
+  ${GTSAM_LIBRARIES}
+  SuperOdomLib
+  pthread
+)
 
 # Feature Extraction node
 add_executable(feature_extraction_node src/featureExtraction_node.cpp)
-ament_target_dependencies(feature_extraction_node rclcpp nav_msgs sensor_msgs super_odometry_msgs livox_ros_driver2)
+ament_target_dependencies(feature_extraction_node 
+  rclcpp 
+  nav_msgs 
+  sensor_msgs 
+  super_odometry_msgs 
+  livox_ros_driver2
+)
 target_link_libraries(feature_extraction_node 
   ${PCL_LIBRARIES}
   ${TBB_LIBRARIES}
-  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
-  $<INSTALL_INTERFACE:include>
   SuperOdomLib
 )
 
 # LiDAR Mapping node
 add_executable(laser_mapping_node src/laserMapping_node.cpp)
-ament_target_dependencies(laser_mapping_node rclcpp std_msgs nav_msgs sensor_msgs geometry_msgs tf2 tf2_ros)
+ament_target_dependencies(laser_mapping_node 
+  rclcpp 
+  std_msgs 
+  nav_msgs 
+  sensor_msgs 
+  geometry_msgs 
+  tf2 
+  tf2_ros
+  visualization_msgs
+)
 target_link_libraries(laser_mapping_node
-    ${PCL_LIBRARIES}
-    ${CERES_LIBRARIES}
-    SuperOdomLib
+  ${PCL_LIBRARIES}
+  ${CERES_LIBRARIES}
+  SuperOdomLib
 )
 
 # Install Exported Libraries
@@ -169,8 +208,21 @@ install(
 
 ament_export_include_directories(include)
 ament_export_libraries(SuperOdomLib)
+ament_export_dependencies(
+  rclcpp
+  std_msgs
+  geometry_msgs
+  nav_msgs
+  sensor_msgs
+  tf2
+  tf2_ros
+  tf2_geometry_msgs
+  super_odometry_msgs
+  visualization_msgs
+  pcl_conversions
+)
 
-#Install executables
+# Install executables
 install(TARGETS
   imu_preintegration_node
   feature_extraction_node

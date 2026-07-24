@@ -279,7 +279,7 @@ namespace super_odometry {
 
         size_t LocalizationLineDistanceNbrNeighbors = 10;
         size_t LocalizationMinmumLineNeighborRejection = 4;
-        size_t LocalizationPlaneDistanceNbrNeighbors = 5;
+        size_t LocalizationPlaneDistanceNbrNeighbors = 9;
 
         double LocalizationLineDistancefactor = 5.0;
 

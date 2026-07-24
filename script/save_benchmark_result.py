@@ -15,6 +15,7 @@ from nav_msgs.msg import Path
 # Rerun imports
 import rerun as rr
 import numpy as np
+import csv
 
 class PathSubscriber(Node):
     def __init__(self):
@@ -62,6 +63,37 @@ class PathSubscriber(Node):
         self.laser_last_message_time = time.time()
         self.get_logger().info(f'Received laser path message with {len(msg.poses)} poses')
     
+    def append_pose_to_csv(self, pose_stamped, source="imu"):
+        output_file = f"{source}_poses.csv"
+        file_exists = os.path.isfile(output_file)
+
+        with open(output_file, mode='a', newline='') as f:
+            writer = csv.writer(f)
+
+            # Write header if file is new
+            if not file_exists:
+                writer.writerow([
+                    "timestamp",
+                    "p_w_b_x", "p_w_b_y", "p_w_b_z",
+                    "q_w_b_x", "q_w_b_y", "q_w_b_z", "q_w_b_w"
+                ])
+
+            # Get timestamp from pose_stamped.header.stamp
+            stamp = pose_stamped.header.stamp
+            timestamp = stamp.sec + stamp.nanosec * 1e-9
+
+            # Write pose data
+            writer.writerow([
+                timestamp,
+                pose_stamped.pose.position.x,
+                pose_stamped.pose.position.y,
+                pose_stamped.pose.position.z,
+                pose_stamped.pose.orientation.x,
+                pose_stamped.pose.orientation.y,
+                pose_stamped.pose.orientation.z,
+                pose_stamped.pose.orientation.w
+            ])
+    
     def imu_path_callback(self, msg):
         """Callback for receiving IMU Path messages"""
         self.imu_path_messages.append(msg)
@@ -70,6 +102,7 @@ class PathSubscriber(Node):
         # Add all poses from this message to the global list
         for pose in msg.poses:
             self.all_imu_poses.append(pose)
+            self.append_pose_to_csv(pose, source="imu")
             
         self.get_logger().info(f'Received IMU path message with {len(msg.poses)} poses, total: {len(self.all_imu_poses)}')
         
