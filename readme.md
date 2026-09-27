@@ -123,13 +123,18 @@ make -j6 && sudo make install
 #### Install Ceres
 ```bash
 sudo apt update 
-sudo apt install libgoogle-glob-dev
+sudo apt install libgoogle-glog-dev
 git clone https://github.com/ceres-solver/ceres-solver.git
 cd ceres-solver
 git checkout f68321e7de8929fbcdb95dd42877531e64f72f66
 mkdir build
 cd build
-cmake ..
+
+# For Jetson Thor (Arm Ub24) to avoid   No target "cuda_dense_cholesky_test"
+cmake .. \
+  -DCMAKE_CUDA_COMPILER=/usr/local/cuda/bin/nvcc \
+  -DCMAKE_CUDA_ARCHITECTURES="native" \
+  -DCMAKE_BUILD_TYPE=Release 
 make -j8  # Use number of cores you have, e.g., -j8 for 8 cores
 sudo make install
 ```
